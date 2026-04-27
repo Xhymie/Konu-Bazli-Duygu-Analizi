@@ -12,9 +12,8 @@ venv/
 *.ipynb_checkpoints
  
 # Data (büyük dosyalar)
-data/raw/*.csv
+
 data/raw/*.json
-data/external/*.csv
 *.zip
  
 # IDE
