@@ -43,19 +43,35 @@ E-ticaret platformlarındaki ürün yorumları, tek bir yıldız puanıyla özet
 | **Trendyol** (birincil) | Web Scraping | Elektronik kategorisindeki ürün yorumları, yıldız puanları, tarih bilgileri |
 | **Kaggle Türkçe Yorum Datasetleri** (ikincil) | Açık Veri | Cross-domain doğrulama ve model genellenebilirlik testi için |
  
-- **Erişim Yöntemi:** Buna belirlenip bu kısım güncellenecektir.
-- **Hedef Ürün Grupları:** Akıllı telefon, pc, bluetooth kulaklık vb elektronik araçlar.
-- **Toplanacak Tahmini Değişkenler:** Yorum metni, yıldız puanı (1-5), yorum tarihi, ürün adı, satıcı adı, beğeni sayısı
+- **Erişim Yöntemi:** Selenium ile otomatik tarayıcı kontrolü (Puan filtresi otomasyonu dahil). Detaylar için bkz. `docs/scraping_notes.md`.
+- **Hedef Ürün Grupları:** 6 elektronik ürün — 2 telefon (iPhone 13, iPhone 11), 2 kulaklık (AirPods 2/4), 2 bilgisayar (MacBook Air M1, Lenovo IdeaPad Slim 3).
+- **Toplanan Değişkenler:** Yorum metni, yıldız puanı (1-5), yorum tarihi, ürün adı, satıcı adı, beğeni sayısı.
+- **Toplam Yorum Sayısı:** 1500 (ürün başına 250). 1, 2, 3, 4 yıldız için her birinden ~50 yorum, kalan kota 5 yıldızdan tamamlanmıştır (dengeli sentiment dağılımı için).
 - **Etiketleme:** Aspect bazlı anahtar kelime sözlüğü ile otomatik etiketleme + manuel doğrulama
+
+### Veri Dağılımı
+
+| Puan | Sayı | Yüzde |
+|------|------|-------|
+| 1    | 300  | %20   |
+| 2    | 163  | %11   |
+| 3    | 238  | %16   |
+| 4    | 300  | %20   |
+| 5    | 499  | %33   |
  
 ## Yöntem
  
 ### Veri Toplama & Ön İşleme
-- 
+- Selenium tabanlı web scraper ile Trendyol'dan dengeli veri toplama
+- Trendyol'un puan filtresi otomasyonu (1-5 yıldız ayrı ayrı çekilir)
+- Otomatik aspect ve sentiment etiketleme (anahtar kelime sözlüğü)
+- Detaylı teknik notlar: `docs/scraping_notes.md`
  
 ### Modelleme Yaklaşımları
--
- 
+- **Baseline:** TF-IDF + Logistic Regression / Linear SVM (planlanıyor)
+- **Transfer Learning:** BERTurk fine-tuning (planlanıyor)
+- **Görevler:** Sentiment classification (3 sınıf), Rating prediction (5 sınıf), Aspect classification (multi-label)
+
 ### Değerlendirme Metrikleri
 - Accuracy, Precision, Recall, F1-Score (aspect bazlı ve genel)
 - Confusion Matrix
@@ -64,18 +80,25 @@ E-ticaret platformlarındaki ürün yorumları, tek bir yıldız puanıyla özet
 ## Proje Yapısı
 - Şuanlık proje yapısı oluşturuldu, oluşturulacak yeni dosyalar ya da alt dizinler buraya eklenecektir.
  
-```
+``
 /
-├── README.md                    # Proje açıklaması ve güncellendiğinde update edilecektir.
-├── requirements.txt             # Python bağımlılıkları ve kütüphaneler için yazılacaktır.
-├── .gitignore                   # Git dışı tutulan dosyalar.
+├── README.md                                    # Proje açıklaması
+├── requirements.txt                             # Python bağımlılıkları
+├── .gitignore                                   # Git dışı tutulan dosyalar
+│
 ├── data/
-├── notebooks/
+│   ├── raw/                                     # İşlenmemiş veri
+│   │   └── trendyol_yorumlar_dengeli.csv        # 1500 yorum, 6 ürün
+│   └── processed/                               # Temizlenmiş ve etiketli veri
+│
 ├── src/
-├── visuals/
-├── reports/
+│   └── scrape_trendyol.py                       # Trendyol scraper (Selenium)
+│
+├── notebooks/                                   # Jupyter notebookları (EDA, modelleme)
+├── visuals/                                     # Grafikler ve görseller
+├── reports/                                     # Raporlar (ara/final)
 └── docs/
-    
+    └── scraping_notes.md                        # Scraping teknik dokümantasyonu
 ```
  
 ## Kurulum
@@ -95,19 +118,41 @@ pip install -r requirements.txt
  
 ## Kullanım
  
-Bu kısım proje yapıldıkça güncellenecektir.
+### Veri toplama (yeniden çekmek isteyenler için)
+
+```bash
+python src/scrape_trendyol.py
+```
+
+> Scraper Chrome tarayıcıyı görünür modda açar. ~15 dakika sürer ve `trendyol_yorumlar_dengeli.csv` üretir. Toplama işlemi tamamlandığında dosya manuel olarak `data/raw/` altına taşınmalıdır.
+
+### Veri keşfi
+
+```bash
+Mevcut CSV ile çalışmak için doğrudan data/raw/trendyol_yorumlar_dengeli.csv kullanın
+```
+
+Modelleme bölümleri eklendikçe bu kısım güncellenecektir.
+
+
  
 ## Sonuçlar
  
-> Proje devam etmektedir. Sonuçlar elde edildikçe bu bölüm güncellenecektir.
+### Veri Toplama (Tamamlandı)
+- 6 elektronik ürün için 1500 yorum
+- Puan dağılımı dengeli (eskiden %80 5⭐ iken şimdi %33)
+- HTML parse'tan gelen rating ile filter rating %100 uyumlu
+
+### Modelleme (Devam Ediyor)
+> Sonuçlar elde edildikçe bu bölüm güncellenecektir.
  
 ## Ekip
- 
+
 | İsim | Görev Alanı |
 |------|-------------|
-| Ahmet Çağlar | Görev Alanı dağıtılmadı yapıldıkça commitle beraber buralarda güncellenecektir. |
-| İbrahim Biner | Görev Alanı dağıtılmadı yapıldıkça commitle beraber buralarda güncellenecektir.  |
-| Dilara Çatalçam | Görev Alanı dağıtılmadı yapıldıkça commitle beraber buralarda güncellenecektir. |
+| Ahmet Çağlar | Görev Alanı dağıtılmadı, yapıldıkça commitle beraber buralarda güncellenecektir. |
+| İbrahim Biner | Görev Alanı dağıtılmadı, yapıldıkça commitle beraber buralarda güncellenecektir. |
+| Dilara Çatalçam | Veri toplama (scraper geliştirme), veri kalite kontrolü. | |
  
 ## Kaynakça
  
