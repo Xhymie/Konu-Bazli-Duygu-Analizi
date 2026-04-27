@@ -1,1 +1,20 @@
-# Kullanılan kütüphaneler buraya yazılacaktır.
+# ─── Veri toplama (scraping) ─────────────────────
+selenium>=4.15.0
+webdriver-manager>=4.0.0
+beautifulsoup4>=4.12.0
+
+# ─── Veri işleme ─────────────────────
+pandas>=2.0.0
+numpy>=1.24.0
+
+# ─── Modelleme (klasik ML) ─────────────────────
+scikit-learn>=1.3.0
+
+# ─── Görselleştirme ─────────────────────
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# ─── NLP yardımcıları (ileride) ─────────────────────
+# nltk>=3.8.0
+# transformers>=4.35.0  # BERTurk için
+# torch>=2.0.0          # BERTurk için
