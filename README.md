@@ -157,3 +157,9 @@ Modelleme bölümleri eklendikçe bu kısım güncellenecektir.
 ## Kaynakça
  
 - Örnek kaynakça burada tutulacaktır. Her referansta burasıda update edilip belirtilecektir.
+
+
+## Hoca Revize Önerileri:
+- Hoca verisetini biraz daha arttırmamızı istedi.
+- YTÜ'nün geliştirdiği kozmos modeline bakmamızı söyledi.
+- Ayriyeten bir arayüz basit şeklinde aspectleri nasıl tespit ettiğine dair göstern basit bir arayüz önerisi verdi.
