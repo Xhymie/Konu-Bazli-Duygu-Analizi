@@ -1,29 +1,12 @@
 """
-Trendyol Yorum Scraper - Selenium (v7 FINAL)
-============================================
-Trendyol'un gerçek HTML yapısı tespit edildi:
+Trendyol yorum toplama betiği.
 
-  <button data-testid="filter-toggle-rate">Puan</button>     ← dropdown'u açar
-  <div data-testid="filter-items-list-rate">
-    <label>5 yıldız checkbox</label>   ← sıra: 5,4,3,2,1
-    <label>4 yıldız checkbox</label>
-    ...
-  </div>
-  <button data-testid="filter-apply-button-rate">Uygula</button>   ← filtreyi uygular
+Selenium ile ürün sayfasındaki "Puan" filtresini sırayla uygulayıp her yıldız
+seviyesinden (1..5) yorum çeker. Düşük puanlı yorumlar ön kotayla, kalan kotayı
+5 yıldız yorumlarla doldurur. Toplanan veriler CSV'ye yazılır.
 
-Akış:
-1. Yorum sayfasını aç
-2. Puan butonuna tıkla → dropdown açılır
-3. İstenen yıldıza ait checkbox label'ına tıkla
-4. "Uygula" butonuna tıkla
-5. Sayfa filtreli yorumları gösterir → scroll ile yükle
-6. Bir sonraki puan için tekrarla
-
-Kurulum:
-    pip3 install selenium webdriver-manager beautifulsoup4 pandas
-
-Kullanım:
-    python3 trendyol_selenium.py
+Çalıştırma:
+    python src/scrape_trendyol.py
 """
 
 from selenium import webdriver
@@ -38,10 +21,7 @@ import re
 from collections import Counter
 
 
-# ─────────────────────────────────────────────
-# ÜRÜN LİSTESİ
-# ─────────────────────────────────────────────
-
+# Ürün listesi ve kategori eşlemesi
 URUN_LISTESI = [
     "https://www.trendyol.com/apple/iphone-13-128-gb-yildiz-isigi-cep-telefonu-apple-turkiye-garantili-p-150059024",
     "https://www.trendyol.com/apple/iphone-11-128-gb-beyaz-cep-telefonu-aksesuarsiz-kutu-apple-turkiye-garantili-p-64074794",
@@ -49,6 +29,9 @@ URUN_LISTESI = [
     "https://www.trendyol.com/apple/airpods-4-nesil-mxp63tu-a-p-857508954",
     "https://www.trendyol.com/apple/macbook-air-m1-cip-8gb-256gb-ssd-macos-13-qhd-tasinabilir-bilgisayar-uzay-grisi-p-68042136",
     "https://www.trendyol.com/lenovo/ideapad-slim-3-intel-n100-4gb-ram-128gb-ssd-15-6-p-1057359906",
+    "https://www.trendyol.com/xiaomi/redmi-buds-6-play-siyah-kulakici-kulaklik-gurultu-onleme-bt5-4-ios-android-xiaomi-tr-garantili-p-855229295",
+    "https://www.trendyol.com/casper/nirvana-intel-celeron-n4020-4gb-ram-120gb-ssd-windows-11-home-15-6-hd-laptop-c370-4020-4c00b-p-358003688",
+    "https://www.trendyol.com/samsung/galaxy-a24-128-gb-siyah-cep-telefonu-samsung-turkiye-garantili-p-700100969",
 ]
 
 KATEGORI_MAP = {
@@ -56,34 +39,38 @@ KATEGORI_MAP = {
     "64074794":   "Telefon",
     "6405631":    "Kulaklık",
     "857508954":  "Kulaklık",
+    "855229295":  "Kulaklık",
     "68042136":   "Bilgisayar",
     "1057359906": "Bilgisayar",
+    "358003688":  "Bilgisayar",
+    "700100969":  "Telefon",
 }
 
-# ════ AKILLI KOTA SİSTEMİ ════
-# Hedef: ürün başına TOPLAM_HEDEF yorum.
-# Önce 1,2,3,4 yıldızdan ÖN_HEDEF kadar çekmeye çalışır.
-# Az puanlı yorum yetersizse, kalan boşluğu 5 yıldız ile doldurur.
-#
-# Örnek (TOPLAM=250, ÖN=50):
-#   iPhone 13: 1⭐(50)+2⭐(50)+3⭐(50)+4⭐(50)+5⭐(50) = 250 ✓
-#   AirPods az: 1⭐(20)+2⭐(15)+3⭐(30)+4⭐(45)+5⭐(140) = 250 ✓
-TOPLAM_HEDEF        = 250  # Ürün başına toplam yorum
-ON_HEDEF_PER_PUAN   = 50   # 1,2,3,4 yıldız için ön hedef (mümkünse bu kadar)
-                            # 5 yıldız → kalan kotayı doldurur
-PUAN_SIRASI         = [1, 2, 3, 4, 5]  # Sıra önemli: önce düşük, sona 5
+# Kota ayarları: ürün başına hedeflenen toplam yorum sayısı ve düşük puanlı
+# yorumlar için ön hedef. 5 yıldız kalan kotayı doldurur.
+TOPLAM_HEDEF        = 250
+ON_HEDEF_PER_PUAN   = 50
+PUAN_SIRASI         = [1, 2, 3, 4, 5]
 
 SAYFA_BEKLEME       = 6
 DROPDOWN_BEKLEME    = 2
-FILTRE_BEKLEME      = 4   # Uygula tıkladıktan sonra
+FILTRE_BEKLEME      = 4
 URUN_ARASI_BEKLEME  = 4
-CIKTI_DOSYASI       = "trendyol_yorumlar_dengeli.csv"
+
+# None ise URUN_LISTESI'ndeki tüm ürünler çekilir, aksi halde sadece
+# verilen product_id için ayrı bir dosya üretilir.
+TEK_URUN_ID = "700100969"
+
+# None | "yeni-eski" | "eski-yeni"
+SIRALAMA_TIPI = "yeni-eski"
+
+if TEK_URUN_ID:
+    CIKTI_DOSYASI = f"trendyol_yorumlar_ek_{TEK_URUN_ID}.csv"
+else:
+    CIKTI_DOSYASI = "trendyol_yorumlar_dengeli.csv"
 
 
-# ─────────────────────────────────────────────
-# ASPECT + SENTIMENT
-# ─────────────────────────────────────────────
-
+# Aspect (konu) sözlüğü ve basit sentiment kelime listeleri
 ASPECT_SOZLUGU = {
     "KARGO":   ["kargo", "teslimat", "teslim", "kurye", "gönderim", "ulaştı", "geldi", "hızlı geldi", "geç geldi"],
     "KALITE":  ["kalite", "kaliteli", "sağlam", "dayanıklı", "malzeme", "bozuldu", "kırıldı", "sorunlu", "hatalı", "defolu", "orijinal", "sahte", "muadil"],
@@ -106,23 +93,23 @@ NEGATIF = ["kötü", "rezalet", "yavaş", "geç", "bozuk", "sorunlu", "memnun de
 def kelime_var_mi(metin: str, kelime: str) -> bool:
     return bool(re.search(r"\b" + re.escape(kelime) + r"\b", metin))
 
+
 def aspect_tespit_et(metin: str) -> str:
     temiz = metin.lower()
     bulunan = [a for a, kl in ASPECT_SOZLUGU.items() if any(kelime_var_mi(temiz, k) for k in kl)]
     return "|".join(bulunan) if bulunan else "GENEL"
 
+
 def sentiment_hesapla(metin: str) -> str:
     temiz = metin.lower()
     poz = sum(1 for k in POZITIF if kelime_var_mi(temiz, k))
     neg = sum(1 for k in NEGATIF if kelime_var_mi(temiz, k))
-    if neg > poz: return "NEG"
-    if poz > neg: return "POZ"
+    if neg > poz:
+        return "NEG"
+    if poz > neg:
+        return "POZ"
     return "NOTR"
 
-
-# ─────────────────────────────────────────────
-# SELENIUM KURULUM
-# ─────────────────────────────────────────────
 
 def setup_driver() -> webdriver.Chrome:
     options = Options()
@@ -146,18 +133,16 @@ def setup_driver() -> webdriver.Chrome:
     return driver
 
 
-# ─────────────────────────────────────────────
-# HTML PARSE
-# ─────────────────────────────────────────────
-
 AY_MAP = {
     "Ocak": "01", "Şubat": "02", "Mart": "03", "Nisan": "04",
     "Mayıs": "05", "Haziran": "06", "Temmuz": "07", "Ağustos": "08",
-    "Eylül": "09", "Ekim": "10", "Kasım": "11", "Aralık": "12"
+    "Eylül": "09", "Ekim": "10", "Kasım": "11", "Aralık": "12",
 }
 
+
 def parse_date(el) -> str:
-    if not el: return ""
+    if not el:
+        return ""
     spans = el.find_all("span")
     if len(spans) >= 3:
         gun = spans[0].get_text(strip=True)
@@ -166,29 +151,22 @@ def parse_date(el) -> str:
         return f"{yil}-{ay}-{gun.zfill(2)}"
     return el.get_text(strip=True)
 
+
 def parse_rating(card) -> int:
-    """
-    Yıldız puanını padding-inline-end değerinden hesaplar.
-    Trendyol'un gerçek değerleri:
-      5⭐: 0px
-      4⭐: ~16.71px
-      3⭐: ~33.43px
-      2⭐: ~50.14px
-      1⭐: ~66.86px
-    Her yıldız ~16.71px (5 yıldızlık container ~83.57px)
-    """
+    # Yıldız puanı, dolu yıldız div'inin padding-inline-end stilinden
+    # hesaplanır. Her yıldız ~16.71px genişliğinde, 5 yıldız 0px padding'e
+    # karşılık gelir.
     full_star = card.select_one("div.star-rating-full-star")
     if full_star:
         style = full_star.get("style", "")
         m = re.search(r'padding-inline-end:\s*([\d.]+)px', style)
         if m:
             padding = float(m.group(1))
-            # padding=0 → 5⭐, padding=66.86 → 1⭐
-            # En yakın puanı bul (16.71px aralıklarla)
             yildiz_genisligi = 16.71
             yildiz = 5 - round(padding / yildiz_genisligi)
             return max(1, min(5, yildiz))
     return 5
+
 
 def parse_sayfa(soup: BeautifulSoup) -> list[dict]:
     yorumlar = []
@@ -208,9 +186,11 @@ def parse_sayfa(soup: BeautifulSoup) -> list[dict]:
             el = card.select_one(sel)
             if el:
                 metin = el.get_text(strip=True).replace("Devamını Oku", "").strip()
-                if metin: break
+                if metin:
+                    break
 
-        if not metin: continue
+        if not metin:
+            continue
 
         user_el   = card.select_one("div.detail-item.name")
         date_el   = card.select_one("div.detail-item.date")
@@ -236,30 +216,26 @@ def parse_sayfa(soup: BeautifulSoup) -> list[dict]:
     return yorumlar
 
 
-# ─────────────────────────────────────────────
-# FİLTRE FONKSİYONLARI — GERÇEK SELECTORLER
-# ─────────────────────────────────────────────
-
 def cookie_kapat(driver):
     for sel in ["#onetrust-accept-btn-handler", "button.cookie-accept"]:
         try:
             driver.find_element(By.CSS_SELECTOR, sel).click()
             time.sleep(1)
             return
-        except: pass
+        except Exception:
+            pass
 
 
 def puan_dropdown_ac(driver) -> bool:
-    """Puan dropdown'unu açar. Açıksa zaten True döner."""
-    # Zaten açık mı?
     try:
-        driver.find_element(By.CSS_SELECTOR,
-            "div.filter-dropdown-open[data-testid='filter-dropdown-rate']")
+        driver.find_element(
+            By.CSS_SELECTOR,
+            "div.filter-dropdown-open[data-testid='filter-dropdown-rate']",
+        )
         return True
-    except:
+    except Exception:
         pass
 
-    # Aç
     try:
         btn = driver.find_element(By.CSS_SELECTOR, "button[data-testid='filter-toggle-rate']")
         driver.execute_script("arguments[0].scrollIntoView({block:'center'});", btn)
@@ -268,64 +244,147 @@ def puan_dropdown_ac(driver) -> bool:
         time.sleep(DROPDOWN_BEKLEME)
         return True
     except Exception as e:
-        print(f"    ✗ Puan butonu tıklanamadı: {e}")
+        print(f"    Puan butonu tıklanamadı: {e}")
         return False
 
 
 def puan_filtresi_uygula(driver, puan: int) -> bool:
-    """
-    Belirli bir yıldızın checkbox'ını seçer ve "Uygula" tıklar.
-    Sıra: dropdown'da 5,4,3,2,1 → index 0,1,2,3,4
-    Yani puan=5 → index=0, puan=1 → index=4
-    """
-    print(f"    → {puan} yıldız filtresi uygulanıyor...", end=" ", flush=True)
+    # Checkbox sırası dropdown'da 5..1 olduğundan puan -> index dönüşümü 5-puan.
+    print(f"    -> {puan} yildiz filtresi uygulaniyor...", end=" ", flush=True)
 
     if not puan_dropdown_ac(driver):
         return False
 
-    # Checkbox sıralaması: 5 (üstte) → 1 (altta)
-    index = 5 - puan  # puan=5 → 0, puan=4 → 1, ..., puan=1 → 4
+    index = 5 - puan
 
     try:
-        # checkbox-list içindeki label'ları al
-        labels = driver.find_elements(By.CSS_SELECTOR,
-            "div[data-testid='filter-items-list-rate'] > label")
+        labels = driver.find_elements(
+            By.CSS_SELECTOR,
+            "div[data-testid='filter-items-list-rate'] > label",
+        )
 
         if len(labels) < 5:
-            print(f"✗ sadece {len(labels)} checkbox bulundu (5 olmalı)")
+            print(f"basarisiz - sadece {len(labels)} checkbox bulundu")
             return False
 
         target_label = labels[index]
-        # İçindeki checkbox'a tıkla (label'a tıklayınca da çalışır)
         driver.execute_script("arguments[0].scrollIntoView({block:'center'});", target_label)
         time.sleep(0.5)
         driver.execute_script("arguments[0].click();", target_label)
         time.sleep(1)
 
-        # Uygula butonuna tıkla
-        apply_btn = driver.find_element(By.CSS_SELECTOR,
-            "button[data-testid='filter-apply-button-rate']")
+        apply_btn = driver.find_element(
+            By.CSS_SELECTOR,
+            "button[data-testid='filter-apply-button-rate']",
+        )
         driver.execute_script("arguments[0].click();", apply_btn)
         time.sleep(FILTRE_BEKLEME)
 
-        print("✓")
+        print("tamam")
         return True
 
     except Exception as e:
-        print(f"✗ hata: {e}")
+        print(f"hata: {e}")
         return False
 
 
-# ─────────────────────────────────────────────
-# YARDIMCI
-# ─────────────────────────────────────────────
+# Sıralama dropdown'unda görülebilen metin varyantları.
+SIRALAMA_TEXT_MAP = {
+    "yeni-eski": ["Yeniden Eskiye", "En Yeni", "Yeni → Eski"],
+    "eski-yeni": ["Eskiden Yeniye", "En Eski", "Eski → Yeni"],
+}
+
+
+def siralama_uygula(driver, tip: str) -> bool:
+    # Sıralama butonunu data-testid ve metin tabanlı fallback ile arar.
+    # Bulunamazsa varsayılan ("Önerilen") sıralamayla devam edilir.
+    if not tip or tip not in SIRALAMA_TEXT_MAP:
+        return False
+
+    print(f"  -> Siralama '{tip}' uygulaniyor...", end=" ", flush=True)
+
+    dropdown_btn = None
+    css_kandidatlari = [
+        "button[data-testid='sorting-button']",
+        "button[data-testid='sort-toggle']",
+        "button[data-testid='filter-toggle-sort']",
+        "button[data-testid*='sort']",
+        "div[data-testid*='sort'] button",
+    ]
+    for sel in css_kandidatlari:
+        try:
+            for el in driver.find_elements(By.CSS_SELECTOR, sel):
+                if el.is_displayed():
+                    dropdown_btn = el
+                    break
+            if dropdown_btn:
+                break
+        except Exception:
+            pass
+
+    if not dropdown_btn:
+        try:
+            xpath = (
+                "//button[contains(., 'Sırala')] | "
+                "//div[contains(@class,'sort')]//button | "
+                "//*[contains(text(),'Önerilen Sıralama')]/ancestor::button[1]"
+            )
+            for el in driver.find_elements(By.XPATH, xpath):
+                if el.is_displayed():
+                    dropdown_btn = el
+                    break
+        except Exception:
+            pass
+
+    if not dropdown_btn:
+        print("siralama butonu bulunamadi, atlaniyor")
+        return False
+
+    try:
+        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", dropdown_btn)
+        time.sleep(0.4)
+        driver.execute_script("arguments[0].click();", dropdown_btn)
+        time.sleep(DROPDOWN_BEKLEME)
+    except Exception as e:
+        print(f"dropdown acilamadi ({e}), atlaniyor")
+        return False
+
+    hedef_metinler = SIRALAMA_TEXT_MAP[tip]
+    tiklandi = False
+    for txt in hedef_metinler:
+        try:
+            xp = f"//*[normalize-space(text())='{txt}'] | //*[contains(normalize-space(text()),'{txt}')]"
+            for opt in driver.find_elements(By.XPATH, xp):
+                if opt.is_displayed():
+                    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", opt)
+                    time.sleep(0.3)
+                    driver.execute_script("arguments[0].click();", opt)
+                    tiklandi = True
+                    break
+            if tiklandi:
+                break
+        except Exception:
+            pass
+
+    if not tiklandi:
+        print(f"'{tip}' opsiyonu bulunamadi, atlaniyor")
+        try:
+            from selenium.webdriver.common.keys import Keys
+            driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
+        except Exception:
+            pass
+        return False
+
+    time.sleep(FILTRE_BEKLEME)
+    print("tamam")
+    return True
+
 
 def scroll_yorumlari_yukle(driver, hedef: int) -> int:
-    """Infinite scroll — hedef sayıya kadar veya yeni gelmeyene kadar."""
+    # Hedefe ulaşana veya yeni yorum gelmemeye başlayana kadar sayfayı kaydır.
     onceki = 0
     durma_sayaci = 0
 
-    # Başlangıçta filtreli sayfa render olsun diye biraz bekle
     time.sleep(2)
 
     while True:
@@ -338,7 +397,7 @@ def scroll_yorumlari_yukle(driver, hedef: int) -> int:
 
         if simdi == onceki:
             durma_sayaci += 1
-            if durma_sayaci >= 4:  # 3 yerine 4 — daha sabırlı
+            if durma_sayaci >= 4:
                 return simdi
         else:
             durma_sayaci = 0
@@ -348,25 +407,17 @@ def scroll_yorumlari_yukle(driver, hedef: int) -> int:
         time.sleep(2.5)
 
 
-# ─────────────────────────────────────────────
-# ÜRÜN BAZLI ÇEKME
-# ─────────────────────────────────────────────
-
 def _bir_puan_cek(driver, yorum_url, puan, hedef, gorulen_metinler,
-                   urun_adi, urun_id) -> list[dict]:
-    """Tek bir puan için filtre uygula + scroll + parse. Listeye dönüş yapar."""
-    print(f"\n  ━━ {puan} YILDIZ (hedef: {hedef}) ━━")
-    print(f"  → Sayfa açılıyor...", flush=True)
+                  urun_adi, urun_id) -> list[dict]:
+    print(f"\n  -- {puan} yildiz (hedef: {hedef}) --")
 
-    # Cache'i bypass etmek için URL'ye timestamp ekle
+    # Cache'i bypass etmek için URL'ye timestamp ekleniyor.
     fresh_url = f"{yorum_url}?_={int(time.time() * 1000)}"
     driver.get(fresh_url)
     time.sleep(SAYFA_BEKLEME)
     cookie_kapat(driver)
     time.sleep(1)
 
-    # Yorumların yüklenmesini bekle
-    print(f"  → Yorum DOM yükleniyor...", end=" ", flush=True)
     yorum_yuklendi = False
     for _ in range(20):
         soup_test = BeautifulSoup(driver.page_source, "html.parser")
@@ -374,54 +425,49 @@ def _bir_puan_cek(driver, yorum_url, puan, hedef, gorulen_metinler,
             yorum_yuklendi = True
             break
         time.sleep(1)
-    print("✓" if yorum_yuklendi else "✗ (devam ediliyor)")
+    if not yorum_yuklendi:
+        print("  Yorum DOM yuklenemedi, yine de devam ediliyor.")
 
-    # ÖNEMLİ: Sayfayı "uyandır" — küçük bir scroll-up + scroll-down lazy-load için
-    # Puan butonu bazen sayfa hareket etmeden render edilmiyor
+    # Puan butonu lazy-load oluyor; küçük bir scroll ile tetikleniyor.
     driver.execute_script("window.scrollTo(0, 100);")
     time.sleep(0.5)
     driver.execute_script("window.scrollTo(0, 0);")
     time.sleep(1)
 
-    # Puan butonu görünene kadar bekle (15 saniye)
-    print(f"  → Puan butonu aranıyor...", end=" ", flush=True)
+    # Sıralama her sayfa yüklemesinde varsayılana dönüyor, bu yüzden burada
+    # tekrar uygulanıyor.
+    if SIRALAMA_TIPI:
+        siralama_uygula(driver, SIRALAMA_TIPI)
+
     puan_button_var = False
     for sn in range(15):
         try:
             btns = driver.find_elements(By.CSS_SELECTOR, "button[data-testid='filter-toggle-rate']")
             if btns and btns[0].is_displayed():
                 puan_button_var = True
-                print(f"✓ ({sn+1}sn'de bulundu)")
                 break
-        except:
+        except Exception:
             pass
         time.sleep(1)
 
     if not puan_button_var:
-        print(f"✗ 15sn bekledi yine yok, atlanıyor.")
-        # Debug için ekran görüntüsü kaydet
+        print("  Puan butonu bulunamadi, atlaniyor.")
         try:
             driver.save_screenshot(f"hata_p{puan}_{urun_id}.png")
-            print(f"  📸 Hata screenshot kaydedildi: hata_p{puan}_{urun_id}.png")
-        except:
+        except Exception:
             pass
         return []
 
-    # Filtreyi uygula
     if not puan_filtresi_uygula(driver, puan):
-        print(f"  ✗ {puan} yıldız filtresi uygulanamadı, atlanıyor.")
+        print(f"  {puan} yildiz filtresi uygulanamadi, atlaniyor.")
         return []
 
-    # Scroll ile yükle
-    print(f"  → Scroll ile yükleniyor...", end=" ", flush=True)
     toplam = scroll_yorumlari_yukle(driver, hedef)
-    print(f"{toplam} yorum yüklendi.")
+    print(f"  Scroll sonrasi {toplam} yorum yuklendi.")
 
-    # Parse
     soup = BeautifulSoup(driver.page_source, "html.parser")
     yorumlar = parse_sayfa(soup)
 
-    # Duplicate kontrolü + meta ekle
     bu_puana_ait = []
     rating_uyumsuz = 0
     for y in yorumlar:
@@ -442,19 +488,15 @@ def _bir_puan_cek(driver, yorum_url, puan, hedef, gorulen_metinler,
             break
 
     if rating_uyumsuz > 0:
-        print(f"  ⚠ {rating_uyumsuz} yorumun parse_rating'i {puan} ile uyuşmadı (filtre yine de doğru)")
+        print(f"  Uyari: {rating_uyumsuz} yorumun parse_rating'i {puan} ile uyusmadi.")
 
-    print(f"  ✓ {len(bu_puana_ait)} yeni yorum eklendi")
+    print(f"  {len(bu_puana_ait)} yeni yorum eklendi.")
     return bu_puana_ait
 
 
 def urun_cek(driver, url: str, urun_adi: str, urun_id: str) -> list[dict]:
-    """
-    AKILLI KOTA SİSTEMİ + RETRY:
-    1. Önce 1,2,3,4 yıldızdan ON_HEDEF_PER_PUAN kadar çekmeye çalış
-    2. Az puanlıdan ne kadar çekildiyse, kalan boşluğu 5 yıldız ile doldur
-    3. Bir puan 0 yorum getirirse, 1 kez daha dene (rate-limit/glitch için)
-    """
+    # 1..4 yıldız için ön kota uygulanır, 5 yıldız kalan boşluğu doldurur.
+    # Bir puan sıfır yorum getirirse aynı puan bir kez daha denenir.
     base_url = url.split("?")[0].rstrip("/")
     yorum_url = base_url + "/yorumlar"
 
@@ -462,82 +504,82 @@ def urun_cek(driver, url: str, urun_adi: str, urun_id: str) -> list[dict]:
     gorulen_metinler = set()
 
     def cek_with_retry(puan, hedef):
-        """Bir puanı çek, 0 sonuç gelirse 1 kez retry et."""
         sonuc = _bir_puan_cek(driver, yorum_url, puan, hedef,
-                               gorulen_metinler, urun_adi, urun_id)
+                              gorulen_metinler, urun_adi, urun_id)
         if not sonuc:
-            print(f"  🔁 {puan}⭐ başarısız oldu, 5sn bekleyip tekrar deneniyor...")
+            print(f"  {puan} yildiz icin yeniden deneniyor...")
             time.sleep(5)
             sonuc = _bir_puan_cek(driver, yorum_url, puan, hedef,
-                                   gorulen_metinler, urun_adi, urun_id)
+                                  gorulen_metinler, urun_adi, urun_id)
         return sonuc
 
-    # ÖNCE: 1, 2, 3, 4 yıldız (ön hedef kadar)
     for puan in [1, 2, 3, 4]:
         yorumlar = cek_with_retry(puan, ON_HEDEF_PER_PUAN)
         tum_yorumlar.extend(yorumlar)
 
-    # SONRA: 5 yıldız (kalan kotayı doldur)
     kalan = TOPLAM_HEDEF - len(tum_yorumlar)
     if kalan > 0:
-        print(f"\n  📊 Şu ana kadar {len(tum_yorumlar)} yorum. 5⭐ ile {kalan} yorum daha çekilecek.")
+        print(f"\n  Su ana kadar {len(tum_yorumlar)} yorum. 5 yildizdan {kalan} yorum daha cekilecek.")
         yorumlar_5 = cek_with_retry(5, kalan)
         tum_yorumlar.extend(yorumlar_5)
     else:
-        print(f"\n  📊 Hedef ({TOPLAM_HEDEF}) zaten doldu, 5⭐ atlanıyor.")
+        print(f"\n  Hedef ({TOPLAM_HEDEF}) doldu, 5 yildiz atlaniyor.")
 
     return tum_yorumlar
 
 
-# ─────────────────────────────────────────────
-# MAIN
-# ─────────────────────────────────────────────
-
 def main():
-    print("=" * 60)
-    print("  TRENDYOL YORUM SCRAPER - Selenium v7.1 (Akıllı Kota)")
-    print("=" * 60)
-    print(f"  Ürün sayısı          : {len(URUN_LISTESI)}")
-    print(f"  Toplam hedef/ürün    : {TOPLAM_HEDEF}")
-    print(f"  1-4⭐ ön hedef/puan  : {ON_HEDEF_PER_PUAN}")
-    print(f"  5⭐                  : kalan kotayı doldurur")
-    print(f"  Hedef toplam         : ~{len(URUN_LISTESI) * TOPLAM_HEDEF}\n")
+    if TEK_URUN_ID:
+        cekilecekler = [u for u in URUN_LISTESI if f"-p-{TEK_URUN_ID}" in u]
+        if not cekilecekler:
+            print(f"TEK_URUN_ID='{TEK_URUN_ID}' URUN_LISTESI icinde bulunamadi.")
+            return
+    else:
+        cekilecekler = URUN_LISTESI
 
-    print("[*] Chrome başlatılıyor...")
+    print("Trendyol Yorum Scraper")
+    if TEK_URUN_ID:
+        print(f"  Tek urun modu       : {TEK_URUN_ID}")
+        print(f"  Cikti dosyasi       : {CIKTI_DOSYASI}")
+    print(f"  Siralama tipi       : {SIRALAMA_TIPI or 'varsayilan'}")
+    print(f"  Urun sayisi         : {len(cekilecekler)}")
+    print(f"  Toplam hedef/urun   : {TOPLAM_HEDEF}")
+    print(f"  1-4 yildiz on hedef : {ON_HEDEF_PER_PUAN}")
+    print(f"  Hedef toplam        : ~{len(cekilecekler) * TOPLAM_HEDEF}\n")
+
+    print("[*] Chrome baslatiliyor...")
     driver = setup_driver()
     tum_yorumlar = []
 
     try:
-        for i, url in enumerate(URUN_LISTESI, 1):
+        for i, url in enumerate(cekilecekler, 1):
             m = re.search(r'-p-(\d+)', url)
             urun_id  = m.group(1) if m else str(i)
             parca    = url.rstrip("/").split("/")[-1]
             urun_adi = re.sub(r'-p-\d+$', '', parca).replace("-", " ").title()
 
-            print(f"\n{'='*60}")
-            print(f"[{i}/{len(URUN_LISTESI)}] {urun_adi}")
+            print(f"\n[{i}/{len(cekilecekler)}] {urun_adi}")
             print(f"  ID: {urun_id} | Kategori: {KATEGORI_MAP.get(urun_id, '?')}")
-            print('='*60)
 
             try:
                 yorumlar = urun_cek(driver, url, urun_adi, urun_id)
             except Exception as e:
-                print(f"  ✗ Hata: {e}")
+                print(f"  Hata: {e}")
                 yorumlar = []
 
             tum_yorumlar.extend(yorumlar)
-            print(f"\n  ✅ Bu ürün toplam: {len(yorumlar)} | Genel toplam: {len(tum_yorumlar)}")
+            print(f"\n  Bu urun toplam: {len(yorumlar)} | Genel toplam: {len(tum_yorumlar)}")
 
-            if i < len(URUN_LISTESI):
-                print(f"  ⏳ {URUN_ARASI_BEKLEME}sn bekleniyor...")
+            if i < len(cekilecekler):
+                print(f"  {URUN_ARASI_BEKLEME} sn bekleniyor...")
                 time.sleep(URUN_ARASI_BEKLEME)
 
     finally:
         driver.quit()
-        print("\n[*] Browser kapatıldı.")
+        print("\n[*] Browser kapatildi.")
 
     if not tum_yorumlar:
-        print("\n✗ Hiç yorum çekilemedi.")
+        print("\nHic yorum cekilemedi.")
         return
 
     df = pd.DataFrame(tum_yorumlar)
@@ -547,30 +589,28 @@ def main():
     df = df[[s for s in sutunlar if s in df.columns]]
     df.to_csv(CIKTI_DOSYASI, index=False, encoding="utf-8-sig")
 
-    print("\n" + "=" * 60)
-    print("  ✅ TAMAMLANDI")
-    print("=" * 60)
-    print(f"\n  Toplam yorum : {len(df)}")
-    print(f"  Ürün sayısı  : {df['product_id'].nunique()}")
+    print("\nTamamlandi.")
+    print(f"  Toplam yorum : {len(df)}")
+    print(f"  Urun sayisi  : {df['product_id'].nunique()}")
     print(f"  Dosya        : {CIKTI_DOSYASI}")
 
-    print("\n📊 Filtre puanı dağılımı (yani gerçek puan):")
+    print("\nFiltre puani dagilimi:")
     if "filter_rating" in df.columns:
         print(df["filter_rating"].value_counts().sort_index().to_string())
 
-    print("\n📊 Parse edilen rating dağılımı:")
+    print("\nParse edilen rating dagilimi:")
     print(df["rating"].value_counts().sort_index().to_string())
 
-    print("\n📈 Ürün × puan dağılımı:")
+    print("\nUrun x puan dagilimi:")
     if "filter_rating" in df.columns:
         pivot = df.pivot_table(index="product_name", columns="filter_rating",
                                values="text", aggfunc="count", fill_value=0)
         print(pivot.to_string())
 
-    print("\n📊 Sentiment:")
+    print("\nSentiment dagilimi:")
     print(df["sentiment"].value_counts().to_string())
 
-    print("\n📊 Aspect dağılımı:")
+    print("\nAspect dagilimi:")
     sayac = Counter()
     for row in df["aspects"]:
         sayac.update(row.split("|"))
