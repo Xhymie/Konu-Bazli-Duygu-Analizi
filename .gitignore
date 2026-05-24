@@ -1,30 +1,17 @@
 # Python
 __pycache__/
 *.py[cod]
-*.egg-info/
-dist/
-build/
+*$py.class
+.venv/
 venv/
+env/
 .env
- 
+
 # Jupyter
 .ipynb_checkpoints/
-*.ipynb_checkpoints
- 
-# Data (büyük dosyalar)
 
-data/raw/*.json
-*.zip
- 
-# IDE
+# IDEs
 .vscode/
 .idea/
- 
-# OS
-.DS_Store
-Thumbs.db
- 
-# Model dosyaları (büyük)
-*.pt
-*.bin
-models/
+
+
