@@ -218,7 +218,8 @@ def degerlendir_ve_raporla(etiketli_yolu, cikis_klasoru, tahmin_kayit_yolu):
 
     # Grafik 5: Aspect Duygu Dağılımı (sonuc_aspect_sentiment_dagilimi.png)
     plt.figure(figsize=(12, 6))
-    sns.countplot(data=valid_preds, x='aspect', hue='tahmin', order=aspects, palette='Set1')
+    duygu_renkleri = {'pozitif': '#2ecc71', 'negatif': '#e74c3c', 'notr': '#95a5a6'}
+    sns.countplot(data=valid_preds, x='aspect', hue='tahmin', order=aspects, palette=duygu_renkleri)
     plt.title('Aspect Başına Tahmin Edilen Duygu Dağılımı', fontsize=14)
     plt.xlabel('Aspect', fontsize=12)
     plt.ylabel('Frekans', fontsize=12)
