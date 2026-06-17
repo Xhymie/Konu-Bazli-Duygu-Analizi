@@ -23,15 +23,15 @@ from absa_pipeline import absa_pipeline
 # AYARLAR (PATH TANIMLAMALARI)
 # CSV dosyaları değiştikçe sadece burayı güncellemeniz yeterlidir.
 # ============================================================================
-HAM_VERI_YOLU = r"data/trendyol_yorumlar_full.csv"
-ETIKETLI_VERI_YOLU = r"data/laptop_yorumlar_ai_labeled.csv"
+HAM_VERI_YOLU = r"data/test.csv"
+ETIKETLI_VERI_YOLU = r"data/test.csv"
 CIKIS_KLASORU = "visuals"
-TAHMIN_CSV_YOLU = r"data/laptop_yorumlar_yontem1_tahminler.csv"
+TAHMIN_CSV_YOLU = r"data/test_yontem1.csv"
 
 # Laptop yorumlarının bulunduğu satır aralığı (Pandas indexi olarak)
 # Satır 1002-1751 arası -> Index 1000-1750 arası
-START_INDEX = 1000
-END_INDEX = 1750
+START_INDEX = 0
+END_INDEX = 512
 
 
 def eda_ve_wordcloud(ham_yolu, cikis_klasoru):
@@ -159,6 +159,11 @@ def degerlendir_ve_raporla(etiketli_yolu, cikis_klasoru, tahmin_kayit_yolu):
             true_sent = gt_labels.get(asp, "yok")
             pred_sent = pred_labels.get(asp, "yok")
             
+            # GERÇEKTE "yok" olanları değerlendirme testinden çıkar
+            # Böylece sadece saf duygu analizi başarısını ölçeriz
+            if true_sent == "yok":
+                continue
+            
             y_true.append(true_sent)
             y_pred.append(pred_sent)
             
@@ -179,9 +184,9 @@ def degerlendir_ve_raporla(etiketli_yolu, cikis_klasoru, tahmin_kayit_yolu):
     print("="*40)
     
     accuracy = accuracy_score(y_true, y_pred)
-    print(f"Genel Doğruluk (Accuracy): %{accuracy*100:.2f}\n")
+    print(f"Duygu Analizi Doğruluğu (Accuracy - 'Yok' Sınıfı Hariç): %{accuracy*100:.2f}\n")
     
-    labels = ["yok", "pozitif", "negatif", "notr"]
+    labels = ["pozitif", "negatif", "notr"]
     report = classification_report(y_true, y_pred, labels=labels, target_names=labels, zero_division=0)
     print(report)
 

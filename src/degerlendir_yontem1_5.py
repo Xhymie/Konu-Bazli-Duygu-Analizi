@@ -17,9 +17,9 @@ from hybrid_pipeline import hybrid_absa_pipeline
 # ============================================================================
 # AYARLAR (PATH TANIMLAMALARI)
 # ============================================================================
-ETIKETLI_VERI_YOLU = r"../data/laptop_yorumlar_ai_labeled.csv"
+ETIKETLI_VERI_YOLU = r"../data/test.csv"
 CIKIS_KLASORU = "../visuals/yontem1_5"
-TAHMIN_CSV_YOLU = r"../data/laptop_yorumlar_yontem1_5_tahminler.csv"
+TAHMIN_CSV_YOLU = r"../data/test_yontem1_5_tahminler.csv"
 
 def degerlendir_ve_raporla(etiketli_yolu, cikis_klasoru, tahmin_kayit_yolu):
     """Sistemi değerlendirir, metrikleri basar ve sonuç grafiklerini üretir."""
@@ -77,6 +77,11 @@ def degerlendir_ve_raporla(etiketli_yolu, cikis_klasoru, tahmin_kayit_yolu):
             true_sent = gt_labels.get(asp, "yok")
             pred_sent = pred_labels.get(asp, "yok")
             
+            # GERÇEKTE "yok" olanları değerlendirme testinden çıkar
+            # Böylece sadece saf duygu analizi başarısını ölçeriz
+            if true_sent == "yok":
+                continue
+            
             y_true.append(true_sent)
             y_pred.append(pred_sent)
             
@@ -97,9 +102,9 @@ def degerlendir_ve_raporla(etiketli_yolu, cikis_klasoru, tahmin_kayit_yolu):
     print("="*40)
     
     accuracy = accuracy_score(y_true, y_pred)
-    print(f"Genel Doğruluk (Accuracy): %{accuracy*100:.2f}\n")
+    print(f"Duygu Analizi Doğruluğu (Accuracy - 'Yok' Sınıfı Hariç): %{accuracy*100:.2f}\n")
     
-    labels = ["yok", "pozitif", "negatif", "notr"]
+    labels = ["pozitif", "negatif", "notr"]
     report = classification_report(y_true, y_pred, labels=labels, target_names=labels, zero_division=0)
     print(report)
 
@@ -109,11 +114,42 @@ def degerlendir_ve_raporla(etiketli_yolu, cikis_klasoru, tahmin_kayit_yolu):
     cm = confusion_matrix(y_true, y_pred, labels=labels)
     plt.figure(figsize=(8, 6))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels)
-    plt.title('Yöntem 1.5 Karmaşıklık Matrisi (Confusion Matrix)', fontsize=14)
+    plt.title('Yöntem 1.5 Karmaşıklık Matrisi', fontsize=14)
     plt.xlabel('Tahmin Edilen', fontsize=12)
     plt.ylabel('Gerçek', fontsize=12)
     plt.tight_layout()
     path = os.path.join(cikis_klasoru, 'sonuc_karmasiklik_matrisi_1_5.png')
+    plt.savefig(path)
+    plt.close()
+    print(f"-> Grafik kaydedildi: {path}")
+
+    # Grafik 4: Tahmin Edilen Aspect Frekansları (sonuc_aspect_frekanslari_1_5.png)
+    pred_df = pd.DataFrame(tahmin_satirlari, columns=["yorum", "aspect", "gercek", "tahmin"])
+    valid_preds = pred_df[pred_df['tahmin'] != "yok"]
+    
+    plt.figure(figsize=(10, 6))
+    sns.countplot(data=valid_preds, x='aspect', order=aspects, palette='Set2')
+    plt.title('Tahmin Edilen Aspect Frekansları (Yöntem 1.5)', fontsize=14)
+    plt.xlabel('Aspect', fontsize=12)
+    plt.ylabel('Frekans', fontsize=12)
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    path = os.path.join(cikis_klasoru, 'sonuc_aspect_frekanslari_1_5.png')
+    plt.savefig(path)
+    plt.close()
+    print(f"-> Grafik kaydedildi: {path}")
+
+    # Grafik 5: Aspect Duygu Dağılımı (sonuc_aspect_sentiment_dagilimi_1_5.png)
+    plt.figure(figsize=(12, 6))
+    duygu_renkleri = {'pozitif': '#2ecc71', 'negatif': '#e74c3c', 'notr': '#95a5a6'}
+    sns.countplot(data=valid_preds, x='aspect', hue='tahmin', order=aspects, palette=duygu_renkleri)
+    plt.title('Aspect Başına Tahmin Edilen Duygu Dağılımı (Yöntem 1.5)', fontsize=14)
+    plt.xlabel('Aspect', fontsize=12)
+    plt.ylabel('Frekans', fontsize=12)
+    plt.xticks(rotation=45)
+    plt.legend(title='Duygu')
+    plt.tight_layout()
+    path = os.path.join(cikis_klasoru, 'sonuc_aspect_sentiment_dagilimi_1_5.png')
     plt.savefig(path)
     plt.close()
     print(f"-> Grafik kaydedildi: {path}")
