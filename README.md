@@ -137,7 +137,7 @@ Her split'te sentiment oranı sabit: Pozitif %57,3 · Negatif %34,5 · Nötr %8,
 - Aynı metrikler + Yöntem 1 ile karşılaştırma
 
 ### Yöntem 3 — KOZMOS (YTÜ) Devam Ediyor
-**Branch:** `yontem_3` | **Sorumlu:** Ahmet Çağlar
+**Branch:** `yontem_cozmos` | **Sorumlu:** Ahmet Çağlar
 
 - Model: `ytu-ce-cosmos/turkish-small-bert-uncased`
 - YTÜ Bilgisayar Mühendisliği tarafından geliştirilen Türkçe BERT modeli
@@ -222,7 +222,7 @@ pip install -r requirements.txt
 
 | İsim | Görev Alanı |
 |------|-------------|
-| **Ahmet Çağlar** | Web scraper geliştirme ve veri genişletme (+750 yorum). Telefon ve kulaklık yorumları için hibrit etiketleme pipeline'ı (`etiketle.py`). 3 kategorinin birleştirilmesi ve stratified train/val/test ayrımı. KOZMOS (YTÜ) modeli ile ABSA — `yontem_3` branch. |
+| **Ahmet Çağlar** | Web scraper geliştirme ve veri genişletme (+750 yorum). Telefon ve kulaklık yorumları için hibrit etiketleme pipeline'ı (`etiketle.py`). 3 kategorinin birleştirilmesi ve stratified train/val/test ayrımı. KOZMOS (YTÜ) modeli ile ABSA — `yontem_cozmos` branch. |
 | **İbrahim Biner** | Laptop yorumları etiketlemesi. Kural tabanlı ABSA pipeline (Yöntem 1) ve TF-IDF hibrit yaklaşımı (Yöntem 1.5) — `yontem_1` branch. |
 | **Dilara Çatalçam** | BERTürk (`dbmdz/bert-base-turkish-cased`) fine-tuning ile ABSA — `yontem_2` branch. EDA görselleştirmeleri ve model değerlendirmesi. |
 
@@ -237,5 +237,5 @@ pip install -r requirements.txt
 | Öneri | Durum |
 |-------|-------|
 | Veri setini genişlet | 1.500 → 2.250 yorum (+750) |
-| YTÜ KOZMOS modelini incele | `yontem_3` branch'ında uygulanıyor |
+| YTÜ KOZMOS modelini incele | `yontem_cozmos` branch'ında uygulanıyor |
 | Aspect tespiti demo arayüzü | Modeller tamamlandıktan sonra |
