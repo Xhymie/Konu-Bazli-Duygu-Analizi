@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 """
 Yöntem 1.5 Değerlendirme Sistemi:
 Hibrit sistemin (Kural tabanlı aspect + ML sentiment) test edilmesini sağlar.
@@ -15,7 +15,7 @@ from sklearn.metrics import classification_report, accuracy_score, confusion_mat
 from hybrid_pipeline import hybrid_absa_pipeline
 
 # ============================================================================
-# AYARLAR (PATH TANIMLAMALARI)
+# AYARLAR 
 # ============================================================================
 ETIKETLI_VERI_YOLU = r"../data/test.csv"
 CIKIS_KLASORU = "../visuals/yontem1_5"
@@ -37,13 +37,13 @@ def degerlendir_ve_raporla(etiketli_yolu, cikis_klasoru, tahmin_kayit_yolu):
     if not os.path.exists(cikis_klasoru):
         os.makedirs(cikis_klasoru)
         
-    # 2.1 Gerçek verileri yükle ve hatalı virgülden bölünen yorumları birleştir
+    
     ground_truth = defaultdict(dict)  # {yorum: {aspect: sentiment}}
     all_data = []
     
     with open(etiketli_yolu, mode='r', encoding='utf-8') as f:
         reader = csv.reader(f)
-        header = next(reader)  # Header'ı geç
+        header = next(reader)  
         for row in reader:
             if len(row) >= 3:
                 sentiment = row[-1]
@@ -55,48 +55,48 @@ def degerlendir_ve_raporla(etiketli_yolu, cikis_klasoru, tahmin_kayit_yolu):
                 
     print(f"Toplam benzersiz etiketli yorum sayısı: {len(ground_truth)}")
     
-    # 2.2 Pipeline'ı Çalıştır ve Tahminleri Topla
+    
     aspects = ["kargo", "kalite", "fiyat", "batarya", "ses_goruntu", "ambalaj", "genel"]
     
     y_true = []
     y_pred = []
     
-    # Tahminleri CSV'ye kaydetmek için liste
+    
     tahmin_satirlari = []
     
     print("Sistem çalıştırılıyor (Yöntem 1.5 - Hibrit)...")
     for yorum, gt_labels in ground_truth.items():
-        # Pipeline'dan tahminleri al
+        
         predictions = hybrid_absa_pipeline(yorum)
         pred_labels = {}
         for asp, sent, _, _ in predictions:
             pred_labels[asp] = sent
             
-        # Her aspect için karşılaştırma yap
+        
         for asp in aspects:
             true_sent = gt_labels.get(asp, "yok")
             pred_sent = pred_labels.get(asp, "yok")
             
-            # GERÇEKTE "yok" olanları değerlendirme testinden çıkar
-            # Böylece sadece saf duygu analizi başarısını ölçeriz
+            
+            
             if true_sent == "yok":
                 continue
             
             y_true.append(true_sent)
             y_pred.append(pred_sent)
             
-            # CSV için satır ekle
+            
             if true_sent != "yok" or pred_sent != "yok":
                 tahmin_satirlari.append([yorum, asp, true_sent, pred_sent])
 
-    # 2.3 Tahminleri CSV Olarak Kaydet (Kullanıcının İsteği)
+    
     with open(tahmin_kayit_yolu, mode='w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(["yorum", "aspect", "gercek_sentiment", "tahmin_sentiment"])
         writer.writerows(tahmin_satirlari)
     print(f"-> Yöntem 1.5 tahminleri kaydedildi: {tahmin_kayit_yolu}")
 
-    # 2.4 Metrikleri Hesapla (Hocanın İstediği Madde 3.6)
+    
     print("\n" + "="*40)
     print("YÖNTEM 1.5 DEĞERLENDİRME SONUÇLARI (METRİKLER)")
     print("="*40)
@@ -108,9 +108,9 @@ def degerlendir_ve_raporla(etiketli_yolu, cikis_klasoru, tahmin_kayit_yolu):
     report = classification_report(y_true, y_pred, labels=labels, target_names=labels, zero_division=0)
     print(report)
 
-    # 2.5 Grafikleri Üret (Ekran Görüntüsündeki İsimlerle)
     
-    # Grafik 3: Karmaşıklık Matrisi (sonuc_karmasiklik_matrisi.png)
+    
+    
     cm = confusion_matrix(y_true, y_pred, labels=labels)
     plt.figure(figsize=(8, 6))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels)
@@ -123,7 +123,7 @@ def degerlendir_ve_raporla(etiketli_yolu, cikis_klasoru, tahmin_kayit_yolu):
     plt.close()
     print(f"-> Grafik kaydedildi: {path}")
 
-    # Grafik 4: Tahmin Edilen Aspect Frekansları (sonuc_aspect_frekanslari_1_5.png)
+    
     pred_df = pd.DataFrame(tahmin_satirlari, columns=["yorum", "aspect", "gercek", "tahmin"])
     valid_preds = pred_df[pred_df['tahmin'] != "yok"]
     
@@ -139,7 +139,7 @@ def degerlendir_ve_raporla(etiketli_yolu, cikis_klasoru, tahmin_kayit_yolu):
     plt.close()
     print(f"-> Grafik kaydedildi: {path}")
 
-    # Grafik 5: Aspect Duygu Dağılımı (sonuc_aspect_sentiment_dagilimi_1_5.png)
+    
     plt.figure(figsize=(12, 6))
     duygu_renkleri = {'pozitif': '#2ecc71', 'negatif': '#e74c3c', 'notr': '#95a5a6'}
     sns.countplot(data=valid_preds, x='aspect', hue='tahmin', order=aspects, palette=duygu_renkleri)

@@ -34,7 +34,7 @@ def veri_hazirla(csv_yolu):
                 aspect = row[-2]
                 yorum = ",".join(row[:-2])
                 
-                # Sadece pozitif, negatif ve nötr sınıfları al (yok sınıfı eğitimde kullanılmaz)
+                
                 if sentiment not in ["pozitif", "negatif", "notr"]:
                     continue
                     
@@ -43,19 +43,19 @@ def veri_hazirla(csv_yolu):
                 
                 hedef_cumle = None
                 
-                # Aspect'i barındıran cümleyi bul
+                
                 for cumle in cumleler:
                     bulunanlar = cumledeki_aspectler(cumle)
-                    # Eğer doğrudan aspect kelimesi bulunduysa veya "genel" aspect aranıyorsa
+                    
                     if aspect in bulunanlar or (aspect == "genel" and not bulunanlar):
                         hedef_cumle = cumle
                         break
                         
-                # Eğer aspect'i barındıran cümle bulunamadıysa fallback olarak tüm yorumu al
+                
                 if not hedef_cumle:
                     hedef_cumle = temiz_yorum
                     
-                # Modeli bağlamdan haberdar etmek için "[aspect] cümle" formatında birleştiriyoruz
+                
                 girdi_metni = f"[{aspect}] {hedef_cumle}"
                 
                 X.append(girdi_metni)
@@ -69,7 +69,7 @@ def modelleri_egit_ve_kiyasla():
     En iyi modeli kaydeder.
     """
     print("Veri hazırlanıyor...")
-    # Dosya yolu src klasörüne göre ayarlı olduğundan script src klasöründen çalıştırılmalıdır.
+    
     base_dir = os.path.dirname(os.path.abspath(__file__))
     csv_path = os.path.join(base_dir, ETIKETLI_VERI_YOLU)
     
@@ -91,7 +91,7 @@ def modelleri_egit_ve_kiyasla():
     svm_scores = cross_val_score(svm_model, X_tfidf, y, cv=cv, scoring='f1_macro')
     print(f"SVM Macro F1 (CV): {svm_scores.mean():.4f} (+/- {svm_scores.std() * 2:.4f})")
     
-    # En iyi modeli seç (SVM genelde TF-IDF ile daha iyi çalışır, ama skorlara bakıyoruz)
+    
     best_model_name = "Linear SVM" if svm_scores.mean() > lr_scores.mean() else "Logistic Regression"
     best_model = svm_model if svm_scores.mean() > lr_scores.mean() else lr_model
     
@@ -100,12 +100,12 @@ def modelleri_egit_ve_kiyasla():
     
     best_model.fit(X_tfidf, y)
     
-    # Tüm veri üzerindeki performansı göster (Overfitting durumunu görmek için)
+    
     y_pred = best_model.predict(X_tfidf)
     print("\nEğitim Seti (Tüm Veri) Performansı:")
     print(classification_report(y, y_pred))
     
-    # Klasör yoksa oluştur
+    
     models_dir = os.path.join(base_dir, "..", "models")
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)

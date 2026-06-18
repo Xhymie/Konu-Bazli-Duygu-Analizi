@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 """
 Yöntem 1.5: Hibrit ABSA Pipeline
 =================================
@@ -12,7 +12,7 @@ import joblib
 from absa_pipeline import on_isleme, cumlelere_bol, cumledeki_aspectler
 from sozlukler import ASPECT_SOZLUGU
 
-# Modellerin yükleneceği global değişkenler
+
 _MODEL = None
 _VECTORIZER = None
 
@@ -42,7 +42,6 @@ def ml_sentiment_hesapla(aspect, cumle):
     
     sentiment = _MODEL.predict(X_tfidf)[0]
     
-    # Skor tahmini (Eğer Logistic Regression ise predict_proba, SVM ise decision_function)
     skor = 0
     if hasattr(_MODEL, "predict_proba"):
         probs = _MODEL.predict_proba(X_tfidf)[0]
@@ -78,7 +77,7 @@ def hybrid_absa_pipeline(yorum_metni):
                 sentiment, skor = ml_sentiment_hesapla(asp, cumle)
                 sonuclar.append((asp, sentiment, cumle, skor))
         else:
-            # "genel" aspect kelimesi var mı kontrol et
+            
             cumle_lower = cumle.lower()
             genel_bulundu = False
             for kelime in ASPECT_SOZLUGU["genel"]:
@@ -91,7 +90,7 @@ def hybrid_absa_pipeline(yorum_metni):
                 sentiment, skor = ml_sentiment_hesapla("genel", cumle)
                 sonuclar.append(("genel", sentiment, cumle, skor))
 
-    # Hiç aspect bulunamadıysa tüm yorumu "genel" olarak ML'e ver
+    
     if not herhangi_aspect_bulundu:
         sentiment, skor = ml_sentiment_hesapla("genel", temiz_metin)
         sonuclar.append(("genel", sentiment, temiz_metin, skor))

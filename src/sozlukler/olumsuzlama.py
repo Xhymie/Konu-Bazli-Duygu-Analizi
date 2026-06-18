@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 """
 Olumsuzlama ve Bağlaç Sözlükleri
 =================================
@@ -6,7 +6,7 @@ Olumsuzlama kelimeleri, kalıpları ve cümle bölme bağlaçları.
 """
 
 # ============================================================================
-# OLUMSUZLAMA KELİMELERİ (referans listesi)
+# OLUMSUZLAMA KELİMELERİ 
 # ============================================================================
 
 OLUMSUZLAMA_KELIMELERI = [

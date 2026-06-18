@@ -6,7 +6,7 @@ Bu proje, Trendyol'dan toplanan laptop yorumları üzerinde **Varlık Tabanlı D
 
 ---
 
-## ⚙️ Temel Çalışma Mantığı (Yöntem 1 - Kural Tabanlı)
+##  Temel Çalışma Mantığı (Yöntem 1 - Kural Tabanlı)
 
 Sistem üç ana aşamadan oluşur: **Metin Temizleme → Aspect Tespiti → Sentiment Belirleme**
 
@@ -57,7 +57,7 @@ Aspect bulunan her cümle için `sozlukler/sentiment_sozlugu.py` içindeki pozit
 
 ---
 
-## 🧠 Hibrit Çalışma Mantığı (Yöntem 1.5 - TF-IDF + ML)
+##  Hibrit Çalışma Mantığı (Yöntem 1.5 - TF-IDF + ML)
 
 Kural tabanlı sistem sözlükte tanımlanmayan kelimeleri bilemediği için **Yöntem 1.5** geliştirilmiştir.
 - İlk 3 adım (Temizleme, Bölme, Aspect bulma) **birebir aynı** kalır.
@@ -66,7 +66,7 @@ Kural tabanlı sistem sözlükte tanımlanmayan kelimeleri bilemediği için **Y
 
 ---
 
-## 📁 Proje Yapısı
+##  Proje Yapısı
 
 ```
 .
@@ -98,12 +98,12 @@ Kural tabanlı sistem sözlükte tanımlanmayan kelimeleri bilemediği için **Y
 
 ---
 
-## 🚀 Çalıştırma: Kendi Veri Setinizle Test Etme
+##  Çalıştırma: Kendi Veri Setinizle Test Etme
 
 Sistemi farklı, yepyeni bir `.csv` veri seti ile test etmek isterseniz (ister Yöntem 1, ister Yöntem 1.5 ile) aşağıdaki adımları izleyin:
 
 **Adım 1:** Yeni etiketli CSV dosyanızı `data/` klasörünün içine kopyalayın.
-> ⚠️ **ÖNEMLİ:** Test dosyanızda mutlaka `yorum`, `gercek_aspect`, `gercek_sentiment` isminde 3 sütun bulunmalıdır.
+>  **ÖNEMLİ:** Test dosyanızda mutlaka `yorum`, `gercek_aspect`, `gercek_sentiment` isminde 3 sütun bulunmalıdır.
 
 **Adım 2:** Hangi yöntemi test edecekseniz o scriptin içine girip dosya yollarını değiştirin:
 - **Yöntem 1 için:** `src/degerlendir_yontem1.py` dosyasını açın.
@@ -127,22 +127,22 @@ python src/degerlendir_yontem1_5.py
 
 ---
 
-## 🏆 Sonuçların Karşılaştırılması (Yöntem 1 vs Yöntem 1.5)
+##  Sonuçların Karşılaştırılması (Yöntem 1 vs Yöntem 1.5)
 
 Model, 730 benzersiz laptop yorumu üzerinde (toplam 5.110 örnek) test edilmiştir. Kural tabanlı sistemin sadece Sentiment adımının ML modeli ile değiştirilmesi (Yöntem 1.5), özellikle "Negatif" ve "Nötr" gibi zor sınıflarda **muazzam bir sıçrama** sağlamıştır.
 
 | Sınıf / Metrik | Yöntem 1 (Kural Tabanlı) | Yöntem 1.5 (Hibrit ML) | Değişim |
 |----------------|--------------------------|------------------------|---------|
-| **Genel Doğruluk (Accuracy)** | %84.40 | **%87.24** | 🟢 **+2.84 puan** |
-| **Pozitif (F1-Score)** | 0.63 | **0.68** | 🟢 +0.05 |
-| **Negatif (F1-Score)** | 0.48 | **0.63** | 🚀 **+0.15** |
-| **Nötr (F1-Score)** | 0.24 | **0.64** | 🚀 **+0.40** |
+| **Genel Doğruluk (Accuracy)** | %84.40 | **%87.24** |  **+2.84 puan** |
+| **Pozitif (F1-Score)** | 0.63 | **0.68** |  +0.05 |
+| **Negatif (F1-Score)** | 0.48 | **0.63** |  **+0.15** |
+| **Nötr (F1-Score)** | 0.24 | **0.64** |  **+0.40** |
 
 *Sonuç: Kural tabanlı sistemler "aspect" (özellik) tespitinde çok başarılı olsalar da, kelime sözlüklerinin sınırlılığı duygu analizini zora sokmaktadır. TF-IDF destekli makine öğrenmesi modeli bağlamı daha iyi anladığı için hata payını ciddi oranda düşürmüştür.*
 
 ---
 
-## 📊 Görselleştirmeler
+##  Görselleştirmeler
 
 ### Keşifsel Veri Analizi (EDA)
 

@@ -1,13 +1,7 @@
-# -*- coding: utf-8 -*-
-"""
-Kural Tabanli Aspect-Based Sentiment Analysis (ABSA) Pipeline
-===============================================================
-Trendyol teknoloji urunu yorumlarindan 7 aspect icin sentiment cikarir.
-Aspectler: kargo, kalite, fiyat, batarya, ses_goruntu, ambalaj, genel
 
-Kullanim:
-    from absa_pipeline import absa_pipeline
-    sonuclar = absa_pipeline("Kargo cok hizli geldi ama batarya kotu.")
+"""
+Kural Tabanli Aspect-Based Sentiment Analysis Pipeline
+
 """
 
 import re
@@ -69,15 +63,11 @@ def cumledeki_aspectler(cumle):
     """
     Bir cumlede hangi aspectlerin gectigini tespit eder.
 
-    Hem tam kelime hem alt-dize eslesmesi yapilir:
-    - "batarya" -> "batarya", "bataryasi", "bataryam" icin eslesir
-    - Bilesik ifadeler de kontrol edilir
-
     Args:
         cumle (str): Tek bir cumle metni (on islemeden gecmis)
 
     Returns:
-        list: Bulunan aspect isimlerinin listesi (or. ["kargo", "batarya"])
+        list: Bulunan aspect isimlerinin listesi
     """
     cumle_lower = cumle.lower()
     bulunan_aspectler = []
@@ -125,13 +115,6 @@ def sentiment_hesapla(cumle):
     """
     Bir cumlenin sentiment etiketini ve guven skorunu hesaplar.
 
-    Gelismis Algoritma:
-    1. Once "pozitif_kelime + degil/yok" kaliplarini tespit et
-       -> Bu kaliptaki pozitif kelimeyi say, negatif olarak degerlendir
-    2. Once "negatif_kelime + degil/yok" kaliplarini tespit et
-       -> Bu kaliptaki negatif kelimeyi say, pozitif olarak degerlendir
-    3. Kalan (olumsuzlanmamis) pozitif ve negatif kelimeleri say
-    4. Skor = |pozitif_sayi - negatif_sayi|
 
     Args:
         cumle (str): Tek bir cumle metni (on islemeden gecmis)
@@ -144,12 +127,12 @@ def sentiment_hesapla(cumle):
     pozitif_sayi = 0
     negatif_sayi = 0
 
-    # Olumsuzlama ekleri (kelimeden hemen sonra gelebilecek)
+    
     olumsuzlama_sonekleri = ["degil", "degildi", "degilim",
                              "değil", "değildi", "değilim",
                              "yok", "yoktu"]
 
-    # --- 1. "pozitif + degil" kaliplari -> negatif say ---
+   
     olumsuzlanmis_pozitifler = set()
     for kelime in POZITIF_KELIMELER:
         k = kelime.lower()
@@ -161,7 +144,7 @@ def sentiment_hesapla(cumle):
                     olumsuzlanmis_pozitifler.add(k)
                     break
 
-    # --- 2. "negatif + degil" kaliplari -> pozitif say ---
+    
     olumsuzlanmis_negatifler = set()
     for kelime in NEGATIF_KELIMELER:
         k = kelime.lower()
@@ -173,19 +156,19 @@ def sentiment_hesapla(cumle):
                     olumsuzlanmis_negatifler.add(k)
                     break
 
-    # --- 3. Olumsuzlanmamis pozitif kelimeleri say ---
+    
     for kelime in POZITIF_KELIMELER:
         k = kelime.lower()
         if k in cumle_lower and k not in olumsuzlanmis_pozitifler:
             pozitif_sayi += 1
 
-    # --- 4. Olumsuzlanmamis negatif kelimeleri say ---
+   
     for kelime in NEGATIF_KELIMELER:
         k = kelime.lower()
         if k in cumle_lower and k not in olumsuzlanmis_negatifler:
             negatif_sayi += 1
 
-    # --- 5. Sentiment belirle ---
+    
     if pozitif_sayi > negatif_sayi:
         sentiment = "pozitif"
     elif negatif_sayi > pozitif_sayi:
@@ -224,7 +207,7 @@ def absa_pipeline(yorum_metni):
     Returns:
         list of tuple: [(aspect, sentiment, cumle, skor), ...]
     """
-    # --- On isleme ---
+    
     temiz_metin = on_isleme(yorum_metni)
 
     cumleler = cumlelere_bol(temiz_metin)
@@ -240,7 +223,7 @@ def absa_pipeline(yorum_metni):
             for asp in aspectler:
                 sonuclar.append((asp, sentiment, cumle, skor))
         else:
-            # "genel" aspect kelimesi var mi kontrol et
+            
             cumle_lower = cumle.lower()
             genel_bulundu = False
             for kelime in ASPECT_SOZLUGU["genel"]:
@@ -252,7 +235,7 @@ def absa_pipeline(yorum_metni):
                 sentiment, skor = sentiment_hesapla(cumle)
                 sonuclar.append(("genel", sentiment, cumle, skor))
 
-    # Hic aspect bulunamadiysa tum yorumu "genel" olarak degerlendir
+    
     if not herhangi_aspect_bulundu:
         sentiment, skor = sentiment_hesapla(temiz_metin)
         sonuclar.append(("genel", sentiment, temiz_metin, skor))
