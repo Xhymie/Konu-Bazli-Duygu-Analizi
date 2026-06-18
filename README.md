@@ -1,190 +1,241 @@
-# Yöntem 1 ve 1.5: Kural Tabanlı ve Hibrit ABSA (Aspect-Based Sentiment Analysis)
+# E-Ticaret Yorumlarında Aspect-Based Duygu Analizi
 
-Bu proje, Trendyol'dan toplanan laptop yorumları üzerinde **Varlık Tabanlı Duygu Analizi (ABSA)** gerçekleştirmek için geliştirilmiştir. Projede iki farklı yaklaşım bulunmaktadır:
-1. **Yöntem 1 (Kural Tabanlı):** Tamamen dilbilgisel kurallar ve sözlük (kelime listeleri) üzerinden çalışan temel yaklaşım.
-2. **Yöntem 1.5 (Hibrit):** Kural tabanlı sistemin sadece yetersiz kaldığı duygu (sentiment) analiz kısmının çıkartılıp yerine **TF-IDF + Logistic Regression** makine öğrenmesi modelinin eklendiği güçlendirilmiş yaklaşım.
+> Trendyol elektronik kategorisindeki kullanıcı yorumlarından ürün boyutlarını (kargo, kalite, fiyat, batarya, ses/görüntü, ambalaj) tespit ederek her boyut için duygu sınıflandırması yapan veri madenciliği projesi.
 
----
+## İçindekiler
 
-##  Temel Çalışma Mantığı (Yöntem 1 - Kural Tabanlı)
+- [Proje Hakkında](#proje-hakkında)
+- [Problem Tanımı](#problem-tanımı)
+- [Veri Kaynakları](#veri-kaynakları)
+- [Aspect Tanımları](#aspect-tanımları)
+- [Yöntemler](#yöntemler)
+- [Proje Yapısı](#proje-yapısı)
+- [Kurulum](#kurulum)
+- [Sonuçlar](#sonuçlar)
+- [Ekip](#ekip)
+- [Kaynakça](#kaynakça)
 
-Sistem üç ana aşamadan oluşur: **Metin Temizleme → Aspect Tespiti → Sentiment Belirleme**
+## Proje Hakkında
 
-### 1. Metin Temizleme (Ön İşleme)
-Ham yorumlar işlenmeden önce `on_isleme.py` modülü aracılığıyla temizlenir. Uygulanan adımlar sırasıyla şunlardır:
+Bu proje, Kocaeli Üniversitesi Yazılım Mühendisliği 4. Sınıf **Veri Madenciliği** dersi dönem projesi kapsamında hazırlanmıştır. Geleneksel duygu analizinin ötesine geçerek, bir ürün yorumundaki **farklı boyutlara (aspect)** yönelik duyguları ayrı ayrı tespit etmeyi amaçlamaktadır.
 
-| Adım | Açıklama | Örnek |
-|------|----------|-------|
-| Küçük Harf | Python'un `lower()` yerine Türkçe-uyumlu dönüşüm yapılır (`İ→i`, `I→ı`) | `"İYİ"` → `"iyi"` |
-| URL Temizleme | `http://`, `https://`, `www.` ile başlayan bağlantılar kaldırılır | `"siteye bak www.x.com"` → `"siteye bak"` |
-| Emoji Temizleme | Unicode emoji ve semboller silinir | `"harika 🎉"` → `"harika"` |
-| Tekrar Normalizasyonu | 3+ ardışık aynı karakter 2'ye düşürülür | `"çoooook"` → `"çook"` |
-| Özel Karakter | Noktalama (`. ! ? ,`) ve Türkçe harfler korunur, geri kalan semboller temizlenir | `"ürün** güzel"` → `"ürün güzel"` |
-| Boşluk Temizleme | Birden fazla boşluk tek boşluğa indirilir | `"çok  iyi"` → `"çok iyi"` |
+Örnek:
+> *"Telefonun kamerası harika ama batarya bir günü bile zor götürüyor, kargo hızlıydı."*
+> - Kamera → **Pozitif**
+> - Batarya → **Negatif**
+> - Kargo → **Pozitif**
 
-### 2. Cümlelere Bölme
-Temizlenen yorum iki farklı kurala göre cümlelere ayrılır:
-- **Noktalama işaretleri:** `. ! ?`
-- **Zıtlık bağlaçları:** `ama`, `fakat`, `ancak`, `lakin` — Bu bağlaçlar çoğunlukla farklı duyguları ayırdığından (örn. *"kargo hızlıydı **ama** batarya kötü"*) bağımsız cümle olarak değerlendirilir.
+## Problem Tanımı
 
-### 3. Aspect Tespiti
-Her cümle, `sozlukler/aspect_sozlugu.py` içindeki kelime listelerine göre taranır. Sistem 7 farklı özelliği tanır:
+E-ticaret platformlarındaki ürün yorumları, tek bir yıldız puanıyla özetlenemeyecek kadar zengin bilgi içerir. Bir kullanıcı ürünün kalitesinden memnun olurken kargo hizmetinden şikayetçi olabilir. Geleneksel duygu analizi yöntemleri yorumu bütünsel olarak değerlendirdiğinden bu ayrımı yakalayamaz.
 
-| Aspect | Örnek Tetikleyici Kelimeler |
-|--------|-----------------------------|
-| `kargo` | kargo, teslimat, kurye, paket, hızlı geldi |
-| `batarya` | batarya, pil, şarj, şarj süresi |
-| `fiyat` | fiyat, ücret, para, pahalı, ucuz, fiyat performans |
-| `kalite` | kalite, sağlam, dayanıklı, yapı, malzeme |
-| `ses_goruntu` | ekran, görüntü, ses, çözünürlük, parlak |
-| `ambalaj` | ambalaj, kutu, paketleme, hasar |
-| `genel` | Hiçbir spesifik aspect bulunamazsa varsayılan olarak atanır |
+**Araştırma Sorusu:** E-ticaret yorumlarındaki farklı aspect'ler (kargo, kalite, fiyat, batarya, ses/görüntü, ambalaj) otomatik olarak tespit edilebilir mi ve her boyut için duygu sınıflandırması ne düzeyde doğrulukla yapılabilir?
 
-Bir cümlede birden fazla aspect bulunabilir; bu durumda her biri için ayrı bir kayıt oluşturulur.
+**Hedef Çıktılar:**
+- Aspect bazlı duygu sınıflandırma modeli (her boyut için pozitif/negatif/nötr)
+- Kural tabanlı, BERTürk ve KOZMOS yaklaşımlarının karşılaştırmalı analizi
+- Aspect tespitini gösteren basit bir demo arayüzü (hoca önerisi)
 
-### 4. Sentiment Belirleme (Sadece Yöntem 1)
-Aspect bulunan her cümle için `sozlukler/sentiment_sozlugu.py` içindeki pozitif ve negatif kelime listeleri kullanılarak duygu hesaplanır. Algoritma basit bir sayım yöntemine dayanmakla birlikte, **olumsuzlama kalıplarını** da dikkate alır:
+## Veri Kaynakları
 
-```text
-"kargo hızlı değil"  → "hızlı" pozitif kelime, "değil" eki var → negatif say
-"kötü değil"         → "kötü" negatif kelime, "değil" eki var → pozitif say
+| Kaynak | Tür | Açıklama |
+|--------|-----|----------|
+| **Trendyol** (birincil) | Web Scraping | Elektronik kategorisindeki ürün yorumları, yıldız puanları, tarih bilgileri |
+
+- **Erişim Yöntemi:** Selenium ile otomatik tarayıcı kontrolü (puan filtresi otomasyonu dahil). Detaylar için bkz. `docs/scraping_notes.md`.
+- **Ürün Grupları:** 9 elektronik ürün — 3 kategori
+
+| Kategori | Ürünler |
+|----------|---------|
+| Telefon (750 yorum) | iPhone 13, iPhone 11, Samsung Galaxy A24 |
+| Kulaklık (750 yorum) | AirPods 2. Nesil, AirPods 4. Nesil, Redmi Buds 6 Play |
+| Bilgisayar (750 yorum) | MacBook Air M1, Lenovo IdeaPad Slim 3, Casper Nirvana |
+
+- **Toplam Ham Yorum:** 2.250 (ürün başına 250, dengeli yıldız dağılımı)
+- **Toplanan Değişkenler:** Yorum metni, yıldız puanı (1–5), yorum tarihi, ürün adı, satıcı, beğeni sayısı
+
+### Ham Veri — Yıldız Dağılımı
+
+| Puan | Adet | Yüzde |
+|------|------|-------|
+| 1 ⭐  | ~300 | %13   |
+| 2 ⭐  | ~163 | %7    |
+| 3 ⭐  | ~238 | %11   |
+| 4 ⭐  | ~300 | %13   |
+| 5 ⭐  | ~499 | %22   |
+| Dengeli çekim | — | %34 |
+
+### Etiketli Veri
+
+Etiketleme, hibrit kural tabanlı pipeline (`src/etiketle.py`) ile yapılmış ve manuel doğrulama ile desteklenmiştir.
+
+| Dosya | İçerik | Satır |
+|-------|--------|-------|
+| `laptop_etiketli.csv` | Bilgisayar yorumları | 1.143 |
+| `telefon_etiketli.csv` | Telefon yorumları | 1.056 |
+| `kulaklik_etiketli.csv` | Kulaklık yorumları | 1.159 |
+| `trendyol_yorumlar_etiketli.csv` | **Birleşik** (3 kategori) | **3.358** |
+
+**Etiketli Veri Dağılımı:**
+
+| Sentiment | Adet | Yüzde |
+|-----------|------|-------|
+| Pozitif | 1.925 | %57,3 |
+| Negatif | 1.157 | %34,5 |
+| Nötr | 276 | %8,2 |
+
+| Aspect | Adet | Yüzde |
+|--------|------|-------|
+| genel | 1.436 | %42,8 |
+| kargo | 386 | %11,5 |
+| kalite | 380 | %11,3 |
+| ses_goruntu | 368 | %11,0 |
+| ambalaj | 285 | %8,5 |
+| fiyat | 257 | %7,7 |
+| batarya | 246 | %7,3 |
+
+### Train / Validation / Test Ayrımı
+
+Stratified split (sentiment dağılımı korunarak, `random_state=42`):
+
+| Split | Satır | Oran |
+|-------|-------|------|
+| **Train** | 2.350 | %70 |
+| **Validation** | 504 | %15 |
+| **Test** | 504 | %15 |
+
+Her split'te sentiment oranı sabit: Pozitif %57,3 · Negatif %34,5 · Nötr %8,2
+
+## Aspect Tanımları
+
+| Aspect | Açıklama |
+|--------|----------|
+| **genel** | Ürün hakkında genel değerlendirme, tavsiye/önermeme |
+| **kargo** | Teslimat süreci, kurye, paketleme hızı |
+| **kalite** | Ürün yapısı, dayanıklılık, orijinallik, fiziksel kusurlar |
+| **fiyat** | Fiyat, fiyat-performans, kampanya |
+| **batarya** | Pil ömrü, şarj süresi, ısınma |
+| **ses_goruntu** | Ses kalitesi, kamera, ekran, görüntü |
+| **ambalaj** | Paketleme, kutu durumu, ezilme/hasar |
+
+## Yöntemler
+
+### Yöntem 1 — Kural Tabanlı ABSA Tamamlandı (Tekrar yapılacak.)
+**Branch:** `yontem_1` | **Sorumlu:** İbrahim Biner
+
+- Türkçe aspect sözlüğü + sentiment analizi ile kural tabanlı ABSA pipeline
+- Cümle bazlı aspect tespiti, negasyon yönetimi
+- **Yöntem 1.5:** TF-IDF + sözlük hibrit yaklaşımı
+- Değerlendirme: Accuracy, F1, Confusion Matrix, görselleştirmeler
+
+### Yöntem 2 — BERTürk Fine-tuning Devam Ediyor
+**Branch:** `yontem_2` | **Sorumlu:** Dilara Çatalçam
+
+- Model: `dbmdz/bert-base-turkish-cased`
+- Input formatı: `[CLS] {yorum} [SEP] {aspect} [SEP]`
+- Fine-tuning: 3–5 epoch, Google Colab (GPU T4)
+- Aynı metrikler + Yöntem 1 ile karşılaştırma
+
+### Yöntem 3 — KOZMOS (YTÜ) Devam Ediyor
+**Branch:** `yontem_3` | **Sorumlu:** Ahmet Çağlar
+
+- Model: `ytu-ce-cosmos/turkish-small-bert-uncased`
+- YTÜ Bilgisayar Mühendisliği tarafından geliştirilen Türkçe BERT modeli
+- Aynı test seti üzerinde değerlendirme → BERTürk ile karşılaştırma
+
+### Karşılaştırma Tablosu (Dolacak)
+
+| Metrik | Yöntem 1 | Yöntem 1.5 | Yöntem 2 (BERTürk) | Yöntem 3 (KOZMOS) |
+|--------|----------|------------|---------------------|-------------------|
+| Accuracy | — | — | — | — |
+| Macro F1 | — | — | — | — |
+| Pozitif F1 | — | — | — | — |
+| Negatif F1 | — | — | — | — |
+| Nötr F1 | — | — | — | — |
+
+## Proje Yapısı
+
+```
+/
+├── README.md
+├── requirements.txt
+├── .gitignore
+│
+├── data/
+│   ├── raw/
+│   │   └── trendyol_yorumlar_full.csv          # 2.250 ham yorum
+│   ├── processed/
+│   │   ├── laptop_etiketli.csv / .xlsx         # 1.143 etiketli çift
+│   │   ├── telefon_etiketli.csv / .xlsx        # 1.056 etiketli çift
+│   │   ├── kulaklik_etiketli.csv               # 1.159 etiketli çift
+│   │   └── trendyol_yorumlar_etiketli.csv/.xlsx # 3.358 birleşik
+│   └── split/
+│       ├── train.csv                            # 2.350 satır (%70)
+│       ├── val.csv                              # 504 satır (%15)
+│       └── test.csv                             # 504 satır (%15)
+│
+├── src/
+│   ├── scrape_trendyol.py                       # Scraping kodu
+│   └── data_split.py                            # Stratified train/val/test
+│
+├── notebooks/
+│   ├── 02_berturk_absa.ipynb                    # BERTürk (Dilara - Colab)
+│   └── 03_kozmos_absa.ipynb                     # KOZMOS (Çağlar - Colab)
+│
+├── visuals/                                     # Grafikler
+├── reports/                                     # Raporlar
+└── docs/
+    └── scraping_notes.md
 ```
 
-**Karar Kuralı:**
-- Pozitif kelime sayısı > Negatif kelime sayısı → `pozitif`
-- Negatif kelime sayısı > Pozitif kelime sayısı → `negatif`
-- Eşit ya da sıfırsa → `nötr` (ancak olumsuzlama kalıbı varsa `negatif`)
+## Kurulum
 
----
-
-##  Hibrit Çalışma Mantığı (Yöntem 1.5 - TF-IDF + ML)
-
-Kural tabanlı sistem sözlükte tanımlanmayan kelimeleri bilemediği için **Yöntem 1.5** geliştirilmiştir.
-- İlk 3 adım (Temizleme, Bölme, Aspect bulma) **birebir aynı** kalır.
-- Aspect bulunduktan sonra cümle `[aspect] cümle` formatında (Örn: `[batarya] biraz hızlı bitiyor`) daha önceden eğitilmiş bir **TF-IDF Vectorizer + Logistic Regression** modeline gönderilir.
-- Model, cümlenin içeriğinden ve bağlamından yola çıkarak duygu tahmini yapar. (Bkz: `hybrid_pipeline.py`)
-
----
-
-##  Proje Yapısı
-
-```
-.
-├── data/                          # Veri dosyaları
-│   ├── trendyol_yorumlar_full.csv     # Ham Trendyol verisi (EDA için)
-│   ├── laptop_yorumlar_ai_labeled.csv # Etiketlenmiş veri (Eğitim ve Test için)
-│   ├── laptop_yorumlar_yontem1_tahminler.csv   # Yöntem 1'in yaptığı tahminler
-│   └── laptop_yorumlar_yontem1_5_tahminler.csv # Yöntem 1.5'in yaptığı tahminler
-│
-├── src/                           # Kaynak kodlar
-│   ├── absa_pipeline.py           # YÖNTEM 1 ana çalıştırıcısı (Tamamen kurallı)
-│   ├── degerlendir_yontem1.py     # Yöntem 1 Test ve Raporlama Scripti
-│   ├── hybrid_pipeline.py         # YÖNTEM 1.5 ana çalıştırıcısı (Hibrit)
-│   ├── degerlendir_yontem1_5.py   # Yöntem 1.5 Test ve Raporlama Scripti
-│   ├── sentiment_tfidf.py         # ML modelini eğiten ve kaydeden script
-│   ├── on_isleme.py               # Metin temizleme
-│   └── sozlukler/                 # Kural tabanlı sistem kelime listeleri
-│
-├── models/                        # Eğitilmiş ML Modelleri
-│   ├── sentiment_model.pkl        # Logistic Regression Modeli
-│   └── tfidf_vectorizer.pkl       # Kelime vektör haritası
-│
-├── visuals/                       # Üretilen grafikler
-│   └── yontem1_5/                 # Yöntem 1.5'in grafikleri
-│
-├── docs/, notebooks/, reports/    # Dökümantasyon klasörleri
-└── README.md
-```
-
----
-
-##  Çalıştırma: Kendi Veri Setinizle Test Etme
-
-Sistemi farklı, yepyeni bir `.csv` veri seti ile test etmek isterseniz (ister Yöntem 1, ister Yöntem 1.5 ile) aşağıdaki adımları izleyin:
-
-**Adım 1:** Yeni etiketli CSV dosyanızı `data/` klasörünün içine kopyalayın.
->  **ÖNEMLİ:** Test dosyanızda mutlaka `yorum`, `gercek_aspect`, `gercek_sentiment` isminde 3 sütun bulunmalıdır.
-
-**Adım 2:** Hangi yöntemi test edecekseniz o scriptin içine girip dosya yollarını değiştirin:
-- **Yöntem 1 için:** `src/degerlendir_yontem1.py` dosyasını açın.
-- **Yöntem 1.5 için:** `src/degerlendir_yontem1_5.py` dosyasını açın.
-
-En üstteki **AYARLAR** bölümündeki dosya adını kendi dosya adınızla değiştirin:
-```python
-ETIKETLI_VERI_YOLU = r"../data/yeni_test_veriniz.csv"
-TAHMIN_CSV_YOLU    = r"../data/yeni_test_veriniz_tahminleri.csv"
-```
-
-**Adım 3:** Terminali ana dizinde açın ve test komutunu çalıştırın:
 ```bash
-# Sadece Kurallı Sistemi test etmek için:
-python src/degerlendir_yontem1.py
+git clone https://github.com/Xhymie/Konu-Bazli-Duygu-Analizi.git
+cd Konu-Bazli-Duygu-Analizi
 
-# Hibrit (Akıllı) Sistemi test etmek için:
-python src/degerlendir_yontem1_5.py
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Linux/Mac
+
+pip install -r requirements.txt
 ```
-> *(Komut çalıştığında sonuçlar anında terminale yazdırılacak ve grafikler `visuals/` klasörüne çizilecektir.)*
+
+## Sonuçlar
+
+### Veri Toplama & Etiketleme
+
+- 9 elektronik ürün, 3 kategori → 2.250 ham yorum
+- Hibrit kural tabanlı etiketleme + manuel doğrulama
+- 3.358 aspect-sentiment çifti, 2.217 benzersiz yorum
+- Stratified train/val/test split (%70/%15/%15)
+
+### Yöntem 1 — Kural Tabanlı
+
+> Detaylar `yontem_1` branch'ında.
+
+### Yöntem 2 & 3 — Derin Öğrenme
+
+> Sonuçlar modeller tamamlandıkça buraya eklenecektir.
+
+## Ekip
+
+| İsim | Görev Alanı |
+|------|-------------|
+| **Ahmet Çağlar** | Web scraper geliştirme ve veri genişletme (+750 yorum). Telefon ve kulaklık yorumları için hibrit etiketleme pipeline'ı (`etiketle.py`). 3 kategorinin birleştirilmesi ve stratified train/val/test ayrımı. KOZMOS (YTÜ) modeli ile ABSA — `yontem_3` branch. |
+| **İbrahim Biner** | Laptop yorumları etiketlemesi. Kural tabanlı ABSA pipeline (Yöntem 1) ve TF-IDF hibrit yaklaşımı (Yöntem 1.5) — `yontem_1` branch. |
+| **Dilara Çatalçam** | BERTürk (`dbmdz/bert-base-turkish-cased`) fine-tuning ile ABSA — `yontem_2` branch. EDA görselleştirmeleri ve model değerlendirmesi. |
+
+## Kaynakça
+
+> Kullanılan kaynaklar modelleme tamamlandıkça buraya eklenecektir.
 
 ---
 
-##  Sonuçların Karşılaştırılması (Yöntem 1 vs Yöntem 1.5)
+## Hoca Revize Önerileri
 
-Model, 730 benzersiz laptop yorumu üzerinde (toplam 5.110 örnek) test edilmiştir. Kural tabanlı sistemin sadece Sentiment adımının ML modeli ile değiştirilmesi (Yöntem 1.5), özellikle "Negatif" ve "Nötr" gibi zor sınıflarda **muazzam bir sıçrama** sağlamıştır.
-
-| Sınıf / Metrik | Yöntem 1 (Kural Tabanlı) | Yöntem 1.5 (Hibrit ML) | Değişim |
-|----------------|--------------------------|------------------------|---------|
-| **Saf Duygu Doğruluğu (Accuracy)** | %48.81 | **%52.18** |  **+3.37 puan** |
-| **Pozitif (F1-Score)** | **0.68** | 0.65 |  -0.03 |
-| **Negatif (F1-Score)** | 0.51 | **0.62** |  **+0.11** |
-| **Nötr (F1-Score)** | 0.34 | **0.43** |  **+0.09** |
-
-
-*Sonuç: Kural tabanlı sistemler "aspect" (özellik) tespitinde çok başarılı olsalar da, kelime sözlüklerinin sınırlılığı duygu analizini zora sokmaktadır. TF-IDF destekli makine öğrenmesi modeli bağlamı daha iyi anladığı için hata payını ciddi oranda düşürmüştür.*
-
----
-
-##  Görselleştirmeler
-
-### Keşifsel Veri Analizi (EDA)
-
-**Yorum Uzunluğu Dağılımı**
-> Yorumların kelime sayısına göre dağılımını gösterir. Çoğu yorumun kısa tutulduğu görülmektedir.
-
-![Yorum Uzunluğu Dağılımı](visuals/yontem1/eda_yorum_uzunlugu_dagilimi.png)
-
----
-
-**En Çok Geçen Kelimeler (WordCloud)**
-> Ham veri üzerinden üretilen genel kelime bulutu. Kullanıcıların en çok hangi kavramlara değindiğini gösterir.
-
-![WordCloud](visuals/yontem1/wordcloud_general.png)
-
----
-
-**Gerçek Aspect Dağılımı**
-> Etiketli veri setindeki aspect'lerin gerçek dağılımı. `genel` ve `kargo` en sık etiketlenen kategorilerdir.
-
-![Aspect Dağılımı](visuals/yontem1/eda_aspect_dagilimi.png)
-
----
-
-### Değerlendirme Sonuçları
-
-**Karmaşıklık Matrisi (Confusion Matrix) - Yöntem 1.5**
-> Geliştirilen hibrit sistemin hangi sınıfları doğru, hangilerini hatalı tahmin ettiğini gösterir. Köşegen üzerindeki değerler doğru tahminleri temsil eder.
-
-![Karmaşıklık Matrisi Yöntem 1.5](visuals/yontem1_5/sonuc_karmasiklik_matrisi_1_5.png)
-
----
-
-**Tahmin Edilen Aspect Frekansları (Yöntem 1)**
-> Kural tabanlı sistemin yorumlarda hangi aspect'i kaç kez tespit ettiğini gösterir.
-
-![Aspect Frekansları](visuals/yontem1/sonuc_aspect_frekanslari.png)
-
----
-
-**Aspect Başına Duygu Dağılımı (Yöntem 1)**
-> Her aspect için sistemin ürettiği pozitif, negatif ve nötr tahminlerin dağılımı.
-
-![Sentiment Dağılımı](visuals/yontem1/sonuc_aspect_sentiment_dagilimi.png)
+| Öneri | Durum |
+|-------|-------|
+| Veri setini genişlet | 1.500 → 2.250 yorum (+750) |
+| YTÜ KOZMOS modelini incele | `yontem_3` branch'ında uygulanıyor |
+| Aspect tespiti demo arayüzü | Modeller tamamlandıktan sonra |
