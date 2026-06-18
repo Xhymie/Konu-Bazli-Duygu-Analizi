@@ -74,7 +74,8 @@ Projede problemi çözmek için 3 temel yaklaşım (ve bir ara hibrit yöntem) g
 - **Yöntem 1.5 (Hibrit):** Aspect tespitini kural tabanlı yapmaya devam ederken, duygu analizi kısmını **TF-IDF + Logistic Regression/SVM** kullanarak gerçekleştirir. Makine öğrenmesi bağlamı öğrendiği için zor sınıflarda başarıyı artırır.
 
 ### 2. Yöntem 2 — BERTürk Fine-Tuning 
-- `dbmdz/bert-base-turkish-cased` modeli üzerinde fine-tuning yapılarak eğitilmektedir.
+- `dbmdz/bert-base-turkish-cased` modeli üzerinde fine-tuning yapılarak eğitilmiştir.
+- Yardımcı cümle (auxiliary-sentence) formatı ile eğitilmiş olup, veri sızıntısını önlemek için GroupShuffleSplit kullanılmıştır.
 
 ### 3. Yöntem 3 — KOZMOS (YTÜ) 
 - Yıldız Teknik Üniversitesi tarafından geliştirilen `ytu-ce-cosmos/turkish-small-bert-uncased` modeli kullanılmıştır.
@@ -87,14 +88,14 @@ Projede problemi çözmek için 3 temel yaklaşım (ve bir ara hibrit yöntem) g
 
 Modellerin test verisi üzerindeki genel karşılaştırması aşağıda verilmiştir. Kural tabanlı yöntemlerin makine öğrenmesi ve Transformer tabanlı dil modellerine (KOZMOS) kıyasla zor sınıfları (Negatif, Nötr) tahmin etmedeki değişimi net bir şekilde görülmektedir.
 
-| Metrik | Yöntem 1 (Kural Tabanlı) | Yöntem 1.5 (TF-IDF Hibrit) | Yöntem 3 (KOZMOS) |
-|--------|--------------------------|----------------------------|-------------------|
-| **Macro F1-Score** | 0.510 | 0.570 | **0.657** |
-| **Pozitif (F1)** | 0.68 | 0.65 | **0.88** |
-| **Negatif (F1)** | 0.51 | 0.62 | **0.77** |
-| **Nötr (F1)** | 0.34 | **0.43** | 0.32 |
+| Metrik | Yöntem 1 (Kural Tabanlı) | Yöntem 1.5 (TF-IDF Hibrit) | Yöntem 2 (BERTürk) | Yöntem 3 (KOZMOS) |
+|--------|--------------------------|----------------------------|--------------------|-------------------|
+| **Macro F1-Score** | 0.510 | 0.570 | **0.690** | 0.657 |
+| **Pozitif (F1)** | 0.68 | 0.65 | **0.89** | 0.88 |
+| **Negatif (F1)** | 0.51 | 0.62 | **0.80** | 0.77 |
+| **Nötr (F1)** | 0.34 | **0.43** | 0.38 | 0.32 |
 
-> *Not: Nötr sınıfı, verisetindeki örnek azlığı (n=45) ve öznelliği nedeniyle tüm modeller için en zorlayıcı sınıf olmuştur. KOZMOS modeli pozitif/negatif ayrımında devasa bir başarı (%88 / %77 F1) göstermiştir.*
+> *Not: Nötr sınıfı, verisetindeki örnek azlığı (n=45) ve öznelliği nedeniyle tüm modeller için en zorlayıcı sınıf olmuştur. BERTürk modeli %89 Pozitif ve %80 Negatif F1 skorları ile genel performansta en yüksek Macro F1 (0.69) skoruna ulaşarak lider olmuştur. Ancak Yöntem 1.5, kısıtlı kapasitesine rağmen Nötr sınıfta tüm derin öğrenme modellerini geçmeyi (0.43) başarmıştır.*
 
 ---
 
@@ -103,6 +104,10 @@ Modellerin test verisi üzerindeki genel karşılaştırması aşağıda verilmi
 ### Yöntem 1.5 (Hibrit) Karmaşıklık Matrisi
 TF-IDF tabanlı Makine Öğrenmesi modelinin tahmin başarıları:
 ![Yöntem 1.5 Matris](visuals/yontem1_5/sonuc_karmasiklik_matrisi_1_5.png)
+
+### Yöntem 2 (BERTürk) Karmaşıklık Matrisi
+En yüksek Macro F1 skoruna ulaşan modelin tahmin başarıları. Negatif ve Pozitif sınıfların ne kadar doğru tahmin edildiğine dikkat ediniz:
+![BERTürk Matris](visuals/Bert_Turk/01_karmasiklik_matrisi.png)
 
 ### Yöntem 3 (KOZMOS) Karmaşıklık Matrisi
 Transformer tabanlı modelin tahmin başarıları. Kutuplu sınıflar (Pozitif/Negatif) arası karışımın ne kadar düşük olduğuna dikkat ediniz:
@@ -121,9 +126,10 @@ Transformer tabanlı modelin tahmin başarıları. Kutuplu sınıflar (Pozitif/N
 │   └── predictions/                             # Modellerin tahmin çıktıları
 ├── src/                                         # Kural tabanlı ve Hibrit Python scriptleri
 ├── notebooks/                                   # BERTürk ve KOZMOS model eğitim notebookları
-│   ├── 02_berturk_absa.ipynb
-│   └── 03_yontem_kozmos.ipynb
+│   ├── 03_yontem_kozmos.ipynb
+│   └── 04_yontem_berturk.ipynb
 ├── visuals/                                     # Grafikler ve matrisler
+│   ├── Bert_Turk/
 │   ├── kozmos_visuals/
 │   └── yontem1_5/
 └── docs/                                        # Detaylı değerlendirme raporları
@@ -154,6 +160,6 @@ pip install -r requirements.txt
 
 | İsim | Görev Alanı |
 |------|-------------|
-| **Ahmet Çağlar** | Web scraper geliştirme ve veri genişletme (+750 yorum). Telefon ve kulaklık yorumları için hibrit etiketleme pipeline'ı (`etiketle.py`). 3 kategorinin birleştirilmesi ve stratified train/val/test ayrımı. KOZMOS (YTÜ) modeli ile ABSA — `yontem_cozmos` branch. |
-| **İbrahim Biner** | Laptop yorumları etiketlemesi. Kural tabanlı ABSA pipeline (Yöntem 1) ve TF-IDF hibrit yaklaşımı (Yöntem 1.5) — `yontem_1` branch. |
+| **Ahmet Çağlar** | Web scraper geliştirme ve veri genişletme (+750 yorum). Telefon ve kulaklık yorumları için hibrit etiketleme pipeline'ı (`etiketle.py`). KOZMOS (YTÜ) modeli ile ABSA — `yontem_cozmos` branch. |
+| **İbrahim Biner** | Laptop yorumları etiketlemesi. Kural tabanlı ABSA pipeline (Yöntem 1) ve TF-IDF hibrit yaklaşımı (Yöntem 1.5) — `yontem_1` branch. 3 kategorinin birleştirilmesi ve stratified train/val/test ayrımı.|
 | **Dilara Çatalçam** | BERTürk (`dbmdz/bert-base-turkish-cased`) fine-tuning ile ABSA — `yontem_2` branch. EDA görselleştirmeleri ve model değerlendirmesi. |
