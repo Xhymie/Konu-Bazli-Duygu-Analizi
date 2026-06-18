@@ -133,10 +133,11 @@ Model, 730 benzersiz laptop yorumu üzerinde (toplam 5.110 örnek) test edilmiş
 
 | Sınıf / Metrik | Yöntem 1 (Kural Tabanlı) | Yöntem 1.5 (Hibrit ML) | Değişim |
 |----------------|--------------------------|------------------------|---------|
-| **Genel Doğruluk (Accuracy)** | %84.40 | **%87.24** |  **+2.84 puan** |
-| **Pozitif (F1-Score)** | 0.63 | **0.68** |  +0.05 |
-| **Negatif (F1-Score)** | 0.48 | **0.63** |  **+0.15** |
-| **Nötr (F1-Score)** | 0.24 | **0.64** |  **+0.40** |
+| **Saf Duygu Doğruluğu (Accuracy)** | %48.81 | **%52.18** |  **+3.37 puan** |
+| **Pozitif (F1-Score)** | **0.68** | 0.65 |  -0.03 |
+| **Negatif (F1-Score)** | 0.51 | **0.62** |  **+0.11** |
+| **Nötr (F1-Score)** | 0.34 | **0.43** |  **+0.09** |
+
 
 *Sonuç: Kural tabanlı sistemler "aspect" (özellik) tespitinde çok başarılı olsalar da, kelime sözlüklerinin sınırlılığı duygu analizini zora sokmaktadır. TF-IDF destekli makine öğrenmesi modeli bağlamı daha iyi anladığı için hata payını ciddi oranda düşürmüştür.*
 
