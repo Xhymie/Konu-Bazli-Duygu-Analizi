@@ -150,21 +150,21 @@ Model, 730 benzersiz laptop yorumu üzerinde (toplam 5.110 örnek) test edilmiş
 **Yorum Uzunluğu Dağılımı**
 > Yorumların kelime sayısına göre dağılımını gösterir. Çoğu yorumun kısa tutulduğu görülmektedir.
 
-![Yorum Uzunluğu Dağılımı](visuals/eda_yorum_uzunlugu_dagilimi.png)
+![Yorum Uzunluğu Dağılımı](visuals/yontem1/eda_yorum_uzunlugu_dagilimi.png)
 
 ---
 
 **En Çok Geçen Kelimeler (WordCloud)**
 > Ham veri üzerinden üretilen genel kelime bulutu. Kullanıcıların en çok hangi kavramlara değindiğini gösterir.
 
-![WordCloud](visuals/wordcloud_general.png)
+![WordCloud](visuals/yontem1/wordcloud_general.png)
 
 ---
 
 **Gerçek Aspect Dağılımı**
 > Etiketli veri setindeki aspect'lerin gerçek dağılımı. `genel` ve `kargo` en sık etiketlenen kategorilerdir.
 
-![Aspect Dağılımı](visuals/eda_aspect_dagilimi.png)
+![Aspect Dağılımı](visuals/yontem1/eda_aspect_dagilimi.png)
 
 ---
 
@@ -180,11 +180,11 @@ Model, 730 benzersiz laptop yorumu üzerinde (toplam 5.110 örnek) test edilmiş
 **Tahmin Edilen Aspect Frekansları (Yöntem 1)**
 > Kural tabanlı sistemin yorumlarda hangi aspect'i kaç kez tespit ettiğini gösterir.
 
-![Aspect Frekansları](visuals/sonuc_aspect_frekanslari.png)
+![Aspect Frekansları](visuals/yontem1/sonuc_aspect_frekanslari.png)
 
 ---
 
 **Aspect Başına Duygu Dağılımı (Yöntem 1)**
 > Her aspect için sistemin ürettiği pozitif, negatif ve nötr tahminlerin dağılımı.
 
-![Sentiment Dağılımı](visuals/sonuc_aspect_sentiment_dagilimi.png)
+![Sentiment Dağılımı](visuals/yontem1/sonuc_aspect_sentiment_dagilimi.png)
