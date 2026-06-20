@@ -162,4 +162,7 @@ pip install -r requirements.txt
 |------|-------------|
 | **Ahmet Çağlar** | Web scraper geliştirme ve veri genişletme (+750 yorum). Telefon ve kulaklık yorumları için hibrit etiketleme pipeline'ı (`etiketle.py`). KOZMOS (YTÜ) modeli ile ABSA — `yontem_cozmos` branch. |
 | **İbrahim Biner** | Laptop yorumları etiketlemesi. Kural tabanlı ABSA pipeline (Yöntem 1) ve TF-IDF hibrit yaklaşımı (Yöntem 1.5) — `yontem_1` branch. 3 kategorinin birleştirilmesi ve stratified train/val/test ayrımı.|
-| **Dilara Çatalçam** | BERTürk (`dbmdz/bert-base-turkish-cased`) fine-tuning ile ABSA — `yontem_2` branch. EDA görselleştirmeleri ve model değerlendirmesi. |
+| **Dilara Çatalçam** | web scraper geliştirme veri çekme. Veri'nin ilk analizi. BERTürk (`dbmdz/bert-base-turkish-cased`) fine-tuning ile ABSA — `yontem_2` branch. EDA görselleştirmeleri ve model değerlendirmesi. |
+
+## Lisans
+Proje sadece Kocaeli Üniversitesi Yazılım Mühendisliği 4.sınıf öğrencilerinden oluşan ekip üyelerinin Veri Madenciliği dersi dönem projesi kapsamında yapılmıştır. Herhangi farklı bir amaç bulunmamaktadır.
