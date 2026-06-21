@@ -1,0 +1,32 @@
+{
+  "toplam_yorum": 1500,
+  "urun_sayisi": 6,
+  "kategori_sayisi": 3,
+  "eksik_veri": 0,
+  "duplicate_yorum": 3,
+  "ortalama_kelime": 12.576666666666666,
+  "medyan_kelime": 11.0,
+  "max_kelime": 31,
+  "puan_dagilimi": {
+    "1": 300,
+    "2": 163,
+    "3": 238,
+    "4": 300,
+    "5": 499
+  },
+  "sentiment_v2_dagilimi": {
+    "POZ": 799,
+    "NEG": 463,
+    "NOTR": 238
+  },
+  "aspect_dagilimi": {
+    "KARGO": 440,
+    "KALITE": 148,
+    "HIZMET": 181,
+    "FIYAT": 76,
+    "BATARYA": 137,
+    "GENEL": 643,
+    "MEDYA": 144,
+    "AMBALAJ": 28
+  }
+}
